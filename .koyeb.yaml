@@ -1,4 +1,4 @@
-name: timesheet-app-free
+name: timesheet-app
 services:
   - name: web
     image: koyeb/app:latest
@@ -13,6 +13,6 @@ services:
         value: production
     scalings:
       min: 1
-      max: 1  # Free tier hanya mendukung 1 instance
+      max: 1
     domains:
-      - name: timesheet-yourname.koyeb.app  # Ganti dengan subdomain Anda
+      - name: timesheet-yourname.koyeb.app
