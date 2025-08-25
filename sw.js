@@ -1,5 +1,5 @@
 // sw.js (Enhanced Offline Support)
-const CACHE_NAME = 'timesheet-cache-v4.1';
+const CACHE_NAME = 'timesheet-cache-v4.2';
 const urlsToCache = [
   './',
   './index.html',
