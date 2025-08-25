@@ -3,14 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard TimeSheet PT.EPM - Offline</title>
+    <title>Dashboard TimeSheet PT.EPM</title>
     <!-- PWA Manifest & Theme -->
-    <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d9488">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="TimeSheetEPM">
-    <link rel="apple-touch-icon" href="./icon-192x192.png">
 
     <!-- Aset Lokal untuk Akses Offline -->
     <script src="./js/tailwindcss.js"></script>
@@ -61,161 +57,39 @@
         #install-btn { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 100; width: auto; padding: 0.75rem 1.5rem; border-radius: 2rem; font-weight: 700; }
         
         /* GPS Tracking Styles */
-        .gps-status-card {
-            transition: all 0.3s ease;
-        }
-        .gps-active {
-            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
-        }
-        .gps-inactive {
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
-        }
-        .geofence-marker {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-        .geofence-active {
-            background-color: #10b981;
-        }
-        .geofence-inactive {
-            background-color: #ef4444;
-        }
-        .accuracy-circle {
-            position: absolute;
-            border-radius: 50%;
-            border: 2px dashed #3b82f6;
-            background-color: rgba(59, 130, 246, 0.1);
-            transform: translate(-50%, -50%);
-            z-index: 10;
-        }
-        .gps-status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .gps-status-on {
-            background-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
-        }
-        .gps-status-off {
-            background-color: #ef4444;
-        }
-        .gps-status-acquiring {
-            background-color: #f59e0b;
-            animation: pulse 1.5s infinite;
-        }
-        .gps-debug {
-            font-size: 0.7rem;
-            color: #6b7280;
-            margin-top: 0.5rem;
-        }
-        .radius-badge {
-            background-color: #3b82f6;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            margin-left: 5px;
-        }
+        .gps-status-card { transition: all 0.3s ease; }
+        .gps-active { box-shadow: 0 0 15px rgba(34, 197, 94, 0.5); }
+        .gps-inactive { box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+        .geofence-marker { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .geofence-active { background-color: #10b981; }
+        .geofence-inactive { background-color: #ef4444; }
+        .gps-status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        .gps-status-on { background-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3); }
+        .gps-status-off { background-color: #ef4444; }
+        .gps-status-acquiring { background-color: #f59e0b; animation: pulse 1.5s infinite; }
+        .gps-debug { font-size: 0.7rem; color: #6b7280; margin-top: 0.5rem; }
+        .radius-badge { background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; margin-left: 5px; }
 
-        /* Status Koneksi */
-        .offline-indicator {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background-color: #f59e0b;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .online-indicator {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background-color: #10b981;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        /* Loading Indicator */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            flex-direction: column;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #0d9488;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Optimasi untuk mobile */
-        @media (max-width: 768px) {
-            .glass-card {
-                border-radius: 1rem;
-                padding: 1rem;
-            }
-            .section-title {
-                font-size: 1.25rem;
-            }
-            .form-input {
-                padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-            }
-            #install-btn {
-                bottom: 5rem;
-            }
-        }
+        /* Status Koneksi & Loading */
+        .connection-indicator { position: fixed; top: 0; left: 0; right: 0; color: white; text-align: center; padding: 10px; font-size: 14px; font-weight: bold; z-index: 1000; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #offline-indicator { background-color: #f59e0b; }
+        #online-indicator { background-color: #10b981; }
+        #loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: #0d9488; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
+    <!-- Loading & Connection Indicators -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
         <p class="text-white mt-4" id="loading-text">Menyiapkan aplikasi...</p>
     </div>
-
-    <!-- Status Koneksi Indicator -->
-    <div id="offline-indicator" class="offline-indicator">
-        <i class="fas fa-wifi-slash mr-2"></i>Mode Offline - Data akan disinkron saat online
+    <div id="offline-indicator" class="connection-indicator">
+        <i class="fas fa-wifi-slash mr-2"></i>Mode Offline - Perubahan akan disinkronkan saat kembali online.
     </div>
-    
-    <div id="online-indicator" class="online-indicator">
-        <i class="fas fa-wifi mr-2"></i>Koneksi pulih - Menyinkron data...
+    <div id="online-indicator" class="connection-indicator">
+        <i class="fas fa-wifi mr-2"></i>Koneksi pulih - Menyinkronkan data...
     </div>
 
     <!-- Tombol Instal PWA -->
@@ -537,7 +411,7 @@
     <script>
     // --- Inisialisasi Supabase & Variabel Global ---
     const SUPABASE_URL = 'https://hwajcditsdmebqmflqsm.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
 
     // --- Konstanta Gaji ---
     const GAJI_POKOK = 3703206;
@@ -567,13 +441,6 @@
                     const store = db.createObjectStore('reports', { keyPath: 'id' });
                     store.createIndex('status', 'status', { unique: false });
                     store.createIndex('user_nik', 'user_nik', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('backgroundRitase')) {
-                    db.createObjectStore('backgroundRitase', { autoIncrement: true });
-                }
-                if (!db.objectStoreNames.contains('offlineOperations')) {
-                    const offlineStore = db.createObjectStore('offlineOperations', { autoIncrement: true });
-                    offlineStore.createIndex('type', 'type', { unique: false });
                 }
             };
             request.onsuccess = (event) => {
@@ -630,125 +497,75 @@
                     resolve();
                 }
             };
-        }),
-        saveBackgroundRitase: (ritaseData) => dbAction('backgroundRitase', 'readwrite', (store, resolve) => store.add(ritaseData).onsuccess = resolve),
-        getBackgroundRitase: () => dbAction('backgroundRitase', 'readonly', (store, resolve) => store.getAll().onsuccess = e => resolve(e.target.result)),
-        clearBackgroundRitase: () => dbAction('backgroundRitase', 'readwrite', (store, resolve) => store.clear().onsuccess = resolve),
-        saveOfflineOperation: (operation) => dbAction('offlineOperations', 'readwrite', (store, resolve) => store.add(operation).onsuccess = resolve),
-        getOfflineOperations: () => dbAction('offlineOperations', 'readonly', (store, resolve) => store.getAll().onsuccess = e => resolve(e.target.result)),
-        clearOfflineOperations: () => dbAction('offlineOperations', 'readwrite', (store, resolve) => store.clear().onsuccess = resolve)
+        })
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // --- Elemen UI ---
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingText = document.getElementById('loading-text');
         const offlineIndicator = document.getElementById('offline-indicator');
         const onlineIndicator = document.getElementById('online-indicator');
-        
-        // --- Status Koneksi ---
+
+        // --- Logika Status Koneksi ---
         function updateConnectionStatus() {
-            if (!navigator.onLine) {
-                offlineIndicator.style.display = 'block';
-                onlineIndicator.style.display = 'none';
-            } else {
+            if (navigator.onLine) {
                 offlineIndicator.style.display = 'none';
+            } else {
+                onlineIndicator.style.display = 'none';
+                offlineIndicator.style.display = 'block';
             }
         }
-        
-        // Event listener untuk perubahan status koneksi
-        window.addEventListener('online', () => {
-            offlineIndicator.style.display = 'none';
-            onlineIndicator.style.display = 'block';
-            
-            setTimeout(() => {
-                onlineIndicator.style.display = 'none';
-            }, 3000);
-            
-            // Coba sinkronkan data saat kembali online
-            if (currentUser) {
-                syncToServer().then(() => {
-                    console.log('Sinkronisasi setelah online selesai');
-                    showMessage('Sinkronisasi Berhasil', 'Data berhasil disinkronkan dengan server.');
-                }).catch(error => {
-                    console.error('Gagal sinkronisasi:', error);
-                });
-            }
-        });
-        
-        window.addEventListener('offline', () => {
+        window.addEventListener('online', async () => {
             updateConnectionStatus();
-            showMessage('Mode Offline', 'Anda sedang offline. Data akan disimpan secara lokal.', false);
+            onlineIndicator.style.display = 'block';
+            if (currentUser) {
+                await syncToServer();
+            }
+            setTimeout(() => { onlineIndicator.style.display = 'none'; }, 3000);
         });
-        
-        // Periksa status koneksi saat load
-        updateConnectionStatus();
+        window.addEventListener('offline', updateConnectionStatus);
 
         // --- Logika Instal PWA ---
         let deferredPrompt;
         const installBtn = document.getElementById('install-btn');
-
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             installBtn.classList.remove('hidden');
         });
-
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
+                await deferredPrompt.userChoice;
                 deferredPrompt = null;
                 installBtn.classList.add('hidden');
             }
         });
 
-        // --- Registrasi Service Worker (Optimized for Offline) ---
+        // --- Registrasi Service Worker ---
         if ('serviceWorker' in navigator) {
             loadingText.textContent = 'Mendaftarkan Service Worker...';
-            
             try {
-                const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-                console.log('Service Worker terdaftar untuk mode offline.', registration);
-                
-                // Periksa jika ada update
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showMessage('Update Tersedia', 'Versi baru aplikasi tersedia. Silakan refresh halaman.', false);
-                        }
-                    });
-                });
+                await navigator.serviceWorker.register('./sw.js');
+                console.log('Service Worker terdaftar.');
             } catch (error) {
                 console.log('Registrasi Service Worker gagal:', error);
-                // Lanjutkan tanpa service worker
             }
         }
 
         // --- Inisialisasi Aplikasi ---
-        loadingText.textContent = 'Menyiapkan database...';
-        
-        try {
-            await initDB();
-            loadingText.textContent = 'Memuat data...';
-            
-            if (!_supabase) {
-                document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
-                return;
-            };
-
-            // Sembunyikan loading overlay
-            setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-                checkLoginState();
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Gagal inisialisasi aplikasi:', error);
-            loadingText.textContent = 'Error inisialisasi. Silakan refresh halaman.';
-            loadingText.style.color = '#ef4444';
+        if (!_supabase) {
+            document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
+            return;
         }
+        loadingText.textContent = 'Menyiapkan database...';
+        await initDB();
+        loadingText.textContent = 'Memuat data...';
+        
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            checkLoginState();
+        }, 500);
 
         // --- SELEKTOR ELEMEN ---
         const el = (selector) => document.querySelector(selector);
@@ -757,13 +574,8 @@
         const showRegisterLink = el('#show-register-link'), showLoginLink = el('#show-login-link');
         const logoutBtn = el('#logout-btn');
         const userNameEl = el('#user-name'), userNikEl = el('#user-nik');
-        
-        const mainContent = el('#main-content');
-        const formContainer = el('#form-container');
-        const dashboardContainer = el('#dashboard-container');
-        const newSessionBtn = el('#new-session-btn');
-        const backToDashboardBtn = el('#back-to-dashboard-btn');
-        
+        const formContainer = el('#form-container'), dashboardContainer = el('#dashboard-container');
+        const newSessionBtn = el('#new-session-btn'), backToDashboardBtn = el('#back-to-dashboard-btn');
         const timesheetForm = el('#timesheet-form');
         const step1Div = el('#step-1'), step2Div = el('#step-2');
         const startSessionBtn = el('#start-session-btn'), cancelSessionBtn = el('#cancel-session-btn');
@@ -771,190 +583,43 @@
         const tanggalInput = el('#tanggal'), shiftInput = el('#shift'), jenisMuatanInput = el('#jenis-muatan');
         const unitTypeStartInput = el('#unit-type-start'), unitIdStartInput = el('#unit-id-start');
         const hmAwalStartInput = el('#hm-awal-start'), kmAwalStartInput = el('#km-awal-start');
-        
         const hmAkhirInput = el('#hm-akhir'), kmAkhirInput = el('#km-akhir');
-        
         const recordRitaseBtn = el('#record-ritase-btn'), ritaseTableBody = el('#ritase-table-body');
         const currentTimeEl = el('#current-time');
         const totalRitaseSummary = el('#total-ritase-summary'), cycleTimeSummary = el('#cycle-time-summary');
-
         const hmFuelInput = el('#hm-fuel'), fuelLiterInput = el('#fuel-liter'), saveFuelBtn = el('#save-fuel-btn');
         const fuelLogHistoryContainer = el('#fuel-log-history');
-        
         const activeSessionContainer = el('#active-session-container');
         const reportListContainer = el('#report-list-container');
         const emptyState = el('#empty-state'), noDataForMonth = el('#no-data-for-month');
         const totalCard = el('#total-card'), grandTotalJamEl = el('#grand-total-jam');
         const mainMonthFilter = el('#main-month-filter');
-        
         const exportSection = el('#export-section'), exportPdfBtn = el('#export-pdf-btn');
-
         const messageModal = el('#message-modal'), messageModalCloseBtn = el('#message-modal-close-btn');
         const messageModalTitle = el('#message-modal-title'), messageModalText = el('#message-modal-text');
-        
         const detailModal = el('#detail-modal'), closeDetailModalBtn = el('#close-detail-modal-btn'), closeDetailModalBtn2 = el('#close-detail-modal-btn-2');
         const detailModalTitle = el('#detail-modal-title'), detailModalInfo = el('#detail-modal-info'), detailModalContent = el('#detail-modal-content');
         const exportSinglePdfBtn = el('#export-single-pdf-btn');
-        
         const confirmModal = el('#confirm-modal'), confirmModalCancelBtn = el('#confirm-modal-cancel-btn'), confirmModalConfirmBtn = el('#confirm-modal-confirm-btn');
         const confirmModalTitle = el('#confirm-modal-title'), confirmModalText = el('#confirm-modal-text');
-
         const themeToggle = el('#theme-toggle'), themeIconSun = el('#theme-icon-sun'), themeIconMoon = el('#theme-icon-moon');
-
-        // --- GPS Auto-Ritase Elements ---
-        const setupGeofenceBtn = el('#setup-geofence-btn');
-        const toggleGpsBtn = el('#toggle-gps-btn');
-        const geofenceStatusIcon = el('#geofence-status-icon');
-        const geofenceStatusText = el('#geofence-status-text');
-        const gpsAccuracy = el('#gps-accuracy');
-        const geofenceTriggerCountEl = el('#geofence-trigger-count');
-        const geofenceCoords = el('#geofence-coords');
-        const geofenceLat = el('#geofence-lat');
-        const geofenceLng = el('#geofence-lng');
-        const geofenceSetupModal = el('#geofence-setup-modal');
-        const cancelSetupBtn = el('#cancel-setup-btn');
-        const saveGeofenceBtn = el('#save-geofence-btn');
-        const setupAccuracy = el('#setup-accuracy');
-        const gpsRitaseCard = el('#gps-ritase-card');
-        const gpsStatusIndicator = el('#gps-status-indicator');
-        const gpsDebugInfo = el('#gps-debug-info');
+        const setupGeofenceBtn = el('#setup-geofence-btn'), toggleGpsBtn = el('#toggle-gps-btn');
+        const geofenceStatusIcon = el('#geofence-status-icon'), geofenceStatusText = el('#geofence-status-text');
+        const gpsAccuracy = el('#gps-accuracy'), geofenceTriggerCountEl = el('#geofence-trigger-count');
+        const geofenceCoords = el('#geofence-coords'), geofenceLat = el('#geofence-lat'), geofenceLng = el('#geofence-lng');
+        const geofenceSetupModal = el('#geofence-setup-modal'), cancelSetupBtn = el('#cancel-setup-btn'), saveGeofenceBtn = el('#save-geofence-btn');
+        const setupAccuracy = el('#setup-accuracy'), gpsRitaseCard = el('#gps-ritase-card');
+        const gpsStatusIndicator = el('#gps-status-indicator'), gpsDebugInfo = el('#gps-debug-info');
 
         // --- STATE APLIKASI ---
-        let allReports = [];
-        let clockInterval;
-        let confirmCallback = null;
-        let currentUser = null; // Akan berisi {nik, full_name}
-        const SESSION_KEY = 'activeWorkSession';
-        const USER_KEY = 'currentUserProfile';
+        let allReports = [], clockInterval, confirmCallback = null, currentUser = null;
+        const SESSION_KEY = 'activeWorkSession', USER_KEY = 'currentUserProfile';
         
-        // --- GPS Auto-Ritase Variables ---
-        const GEOLOCATION_OPTIONS = {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        };
-        
-        let geofenceWatchId = null;
-        let currentGeofence = null;
-        let lastGeofenceState = null;
-        let geofenceTriggerCount = 0;
-        let isMonitoringGeofence = false;
-        let currentPosition = null;
-        let lastTriggerTime = 0;
-        const TRIGGER_COOLDOWN = 30000; // 30 detik cooldown antara trigger
-        const GEOFENCE_RADIUS = 50; // 50 meter radius
-
-        // --- Background Geofencing Functions (Optimized for Offline) ---
-
-        // Memeriksa dukungan Geofencing API
-        async function checkGeofencingSupport() {
-            // Untuk offline, kita perlu fallback ke foreground monitoring
-            if (!('geofencing' in navigator)) {
-                console.warn('Geofencing API tidak didukung, menggunakan fallback foreground monitoring');
-                return false;
-            }
-            
-            return true;
-        }
-
-        // Mendaftarkan geofence ke service worker
-        async function registerBackgroundGeofence(geofence) {
-            if (!await checkGeofencingSupport()) {
-                console.warn('Menggunakan foreground geofencing karena browser tidak mendukung background geofencing');
-                // Simpan geofence untuk foreground monitoring
-                localStorage.setItem('foregroundGeofence', JSON.stringify(geofence));
-                return false;
-            }
-            
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                
-                registration.active.postMessage({
-                    type: 'REGISTER_GEOFENCE',
-                    geofence: geofence
-                });
-                
-                console.log('Geofence berhasil didaftarkan untuk pemantauan latar belakang');
-                return true;
-            } catch (error) {
-                console.error('Gagal mendaftarkan geofence latar belakang:', error);
-                // Fallback ke foreground monitoring
-                localStorage.setItem('foregroundGeofence', JSON.stringify(geofence));
-                return false;
-            }
-        }
-
-        // Menghapus pendaftaran geofence
-        async function unregisterBackgroundGeofence() {
-            if (!await checkGeofencingSupport()) return;
-            
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                registration.active.postMessage({
-                    type: 'UNREGISTER_GEOFENCE'
-                });
-            } catch (error) {
-                console.error('Gagal menghapus pendaftaran geofence:', error);
-            }
-        }
-
-        // Mendengarkan pesan dari service worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                if (event.data.type === 'GEOFENCE_LEAVE') {
-                    handleBackgroundGeofenceLeave(event.data);
-                } else if (event.data.type === 'GEOFENCE_ENTER') {
-                    handleBackgroundGeofenceEnter(event.data);
-                }
-            });
-        }
-
-        // Menangani event keluar area dari latar belakang
-        function handleBackgroundGeofenceLeave(data) {
-            if (getActiveSession()) {
-                geofenceTriggerCount++;
-                geofenceTriggerCountEl.textContent = geofenceTriggerCount;
-                recordRitase();
-                updateRitaseSummary(getActiveSession().ritase, getActiveSession().tanggal, getActiveSession().shift);
-                
-                // Tampilkan notifikasi
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('Auto-Ritase', {
-                        body: 'Ritase tercatat otomatis saat meninggalkan area muatan.',
-                        icon: './icon-192x192.png',
-                        tag: 'ritase-notification'
-                    });
-                }
-            }
-            
-            saveBackgroundRitase({
-                timestamp: data.timestamp,
-                type: 'background_ritase_leave'
-            });
-        }
-
-        // Menangani event masuk area dari latar belakang
-        function handleBackgroundGeofenceEnter(data) {
-            if (getActiveSession()) {
-                geofenceStatusIcon.classList.replace('geofence-inactive', 'geofence-active');
-                geofenceStatusText.textContent = 'Di Area Muatan';
-                gpsRitaseCard.classList.add('gps-active');
-            }
-            
-            saveBackgroundRitase({
-                timestamp: data.timestamp,
-                type: 'background_ritase_enter'
-            });
-        }
-
-        // Menyimpan ritase latar belakang
-        async function saveBackgroundRitase(ritaseData) {
-            try {
-                await localDb.saveBackgroundRitase(ritaseData);
-            } catch (error) {
-                console.error('Gagal menyimpan ritase latar belakang:', error);
-            }
-        }
+        // --- GPS & Geofence Variables ---
+        const GEOLOCATION_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+        let geofenceWatchId = null, currentGeofence = null, lastGeofenceState = null;
+        let geofenceTriggerCount = 0, isMonitoringGeofence = false, lastTriggerTime = 0;
+        const TRIGGER_COOLDOWN = 30000, GEOFENCE_RADIUS = 50;
 
         // --- LOGIKA TEMA ---
         const applyTheme = (theme) => {
@@ -975,14 +640,12 @@
                 : `<i class="fas fa-check-circle text-6xl text-teal-500"></i>`;
             messageModal.classList.replace('hidden', 'flex');
         };
-
         const sanitizeHTML = (str) => {
             if (!str) return '';
             const temp = document.createElement('div');
             temp.textContent = str;
             return temp.innerHTML;
         };
-        
         const formatDate = (dateString, long = false) => {
             const date = new Date(dateString);
             const options = long 
@@ -990,255 +653,98 @@
                 : { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' };
             return date.toLocaleDateString('id-ID', options);
         };
-        
-        const formatCurrency = (number) => {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-        };
+        const formatCurrency = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
 
         // --- MANAJEMEN TAMPILAN ---
         function showView(view) {
-            formContainer.classList.add('hidden');
-            dashboardContainer.classList.add('hidden');
-            if (view === 'form') {
-                formContainer.classList.remove('hidden');
-            } else {
-                dashboardContainer.classList.remove('hidden');
-            }
+            formContainer.classList.toggle('hidden', view !== 'form');
+            dashboardContainer.classList.toggle('hidden', view === 'form');
         }
         
-        // --- GPS Auto-Ritase Functions ---
-        
-        // Calculate distance between two coordinates using Haversine formula
+        // --- GPS & Geofence Functions ---
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Earth radius in meters
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
-            
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            
-            return R * c;
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
-        
-        // Check if current position is within geofence
-        function checkGeofence(position, geofence) {
-            if (!geofence) return false;
-            
-            const distance = calculateDistance(
-                position.coords.latitude, 
-                position.coords.longitude,
-                geofence.latitude,
-                geofence.longitude
-            );
-            
-            return distance <= geofence.radius;
-        }
-        
-        // Handle geofence enter/exit events
         function handleGeofenceChange(isInside, distance) {
             if (lastGeofenceState === isInside) return;
-        
             const previouslyInside = lastGeofenceState === true;
             lastGeofenceState = isInside;
-        
-            if (isInside) {
-                geofenceStatusIcon.classList.replace('geofence-inactive', 'geofence-active');
-                geofenceStatusText.textContent = 'Di Area Muatan';
-                gpsRitaseCard.classList.add('gps-active');
-                gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Dalam Area`;
-            } else {
-                geofenceStatusIcon.classList.replace('geofence-active', 'geofence-inactive');
-                geofenceStatusText.textContent = 'Di Luar Area';
-                gpsRitaseCard.classList.remove('gps-active');
-                gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Luar Area`;
-        
-                const currentTime = Date.now();
-                if (previouslyInside && (currentTime - lastTriggerTime) > TRIGGER_COOLDOWN) {
-                    geofenceTriggerCount++;
-                    geofenceTriggerCountEl.textContent = geofenceTriggerCount;
-                    recordRitase();
-                    lastTriggerTime = currentTime;
-                    showMessage('Auto-Ritase', 'Ritase tercatat otomatis saat meninggalkan area muatan.');
-                }
+            geofenceStatusIcon.classList.toggle('geofence-active', isInside);
+            geofenceStatusIcon.classList.toggle('geofence-inactive', !isInside);
+            gpsRitaseCard.classList.toggle('gps-active', isInside);
+            geofenceStatusText.textContent = isInside ? 'Di Area Muatan' : 'Di Luar Area';
+            gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: ${isInside ? 'Di Dalam' : 'Di Luar'}`;
+            const currentTime = Date.now();
+            if (!isInside && previouslyInside && (currentTime - lastTriggerTime) > TRIGGER_COOLDOWN) {
+                geofenceTriggerCount++;
+                geofenceTriggerCountEl.textContent = geofenceTriggerCount;
+                recordRitase();
+                lastTriggerTime = currentTime;
+                showMessage('Auto-Ritase', 'Ritase tercatat otomatis saat meninggalkan area.');
             }
         }
-        
-        // Start monitoring geofence
         function startGeofenceMonitoring() {
-            if (!currentGeofence) {
-                // Coba muat dari fallback storage
-                const fallbackGeofence = localStorage.getItem('foregroundGeofence');
-                if (fallbackGeofence) {
-                    currentGeofence = JSON.parse(fallbackGeofence);
-                    geofenceCoords.classList.remove('hidden');
-                    geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
-                    geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-                } else {
-                    showMessage('GPS Error', 'Area muatan belum disetup. Silakan setup area terlebih dahulu.', true);
-                    return false;
-                }
-            }
-            
-            if (geofenceWatchId !== null) {
-                return true;
-            }
-            
-            if (!navigator.geolocation) {
-                showMessage('GPS Tidak Support', 'Browser Anda tidak mendukung geolocation.', true);
-                return false;
-            }
-            
-            gpsStatusIndicator.classList.remove('gps-status-off', 'gps-status-on');
-            gpsStatusIndicator.classList.add('gps-status-acquiring');
+            if (!currentGeofence) return showMessage('GPS Error', 'Area muatan belum di-setup.', true);
+            if (geofenceWatchId !== null) return;
+            if (!navigator.geolocation) return showMessage('GPS Tidak Support', 'Browser tidak mendukung geolocation.', true);
+            gpsStatusIndicator.className = 'gps-status-indicator gps-status-acquiring';
             gpsDebugInfo.textContent = 'Mencari sinyal GPS...';
-            
             geofenceWatchId = navigator.geolocation.watchPosition(
                 (position) => {
-                    currentPosition = position;
-                    const accuracy = position.coords.accuracy;
-                    gpsAccuracy.textContent = `${accuracy.toFixed(1)} m`;
-                    
-                    gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-off');
-                    gpsStatusIndicator.classList.add('gps-status-on');
-                    
-                    const distance = calculateDistance(
-                        position.coords.latitude, 
-                        position.coords.longitude,
-                        currentGeofence.latitude,
-                        currentGeofence.longitude
-                    );
-                    
-                    const isInside = distance <= currentGeofence.radius;
-                    handleGeofenceChange(isInside, distance);
+                    gpsAccuracy.textContent = `${position.coords.accuracy.toFixed(1)} m`;
+                    gpsStatusIndicator.className = 'gps-status-indicator gps-status-on';
+                    const distance = calculateDistance(position.coords.latitude, position.coords.longitude, currentGeofence.latitude, currentGeofence.longitude);
+                    handleGeofenceChange(distance <= currentGeofence.radius, distance);
                 },
                 (error) => {
-                    console.error('Geolocation error:', error);
-                    let errorMsg = 'Error mendapatkan lokasi: ';
-                    
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMsg += 'Izin geolocation ditolak';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMsg += 'Posisi tidak available';
-                            break;
-                        case error.TIMEOUT:
-                            errorMsg += 'Timeout mendapatkan posisi';
-                            break;
-                        default:
-                            errorMsg += 'Error tidak diketahui';
-                    }
-                    
-                    gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-on');
-                    gpsStatusIndicator.classList.add('gps-status-off');
-                    gpsDebugInfo.textContent = 'Error: ' + errorMsg;
-                    
-                    showMessage('GPS Error', errorMsg, true);
+                    showMessage('GPS Error', `Error: ${error.message}`, true);
                     stopGeofenceMonitoring();
                 },
                 GEOLOCATION_OPTIONS
             );
-            
             isMonitoringGeofence = true;
             toggleGpsBtn.innerHTML = '<i class="fas fa-stop mr-1"></i>Berhenti';
             toggleGpsBtn.classList.replace('btn-gray', 'btn-danger');
-            
-            return true;
         }
-        
-        // Stop monitoring geofence
         function stopGeofenceMonitoring() {
             if (geofenceWatchId !== null) {
                 navigator.geolocation.clearWatch(geofenceWatchId);
                 geofenceWatchId = null;
             }
-            
-            unregisterBackgroundGeofence();
-            
             isMonitoringGeofence = false;
             toggleGpsBtn.innerHTML = '<i class="fas fa-play mr-1"></i>Mulai';
             toggleGpsBtn.classList.replace('btn-danger', 'btn-gray');
-            
-            geofenceStatusIcon.classList.remove('geofence-active');
-            geofenceStatusIcon.classList.add('geofence-inactive');
-            geofenceStatusText.textContent = 'Tidak Aktif';
-            gpsAccuracy.textContent = '-';
-            gpsRitaseCard.classList.remove('gps-active');
-            gpsDebugInfo.textContent = 'Jarak: - | Status: Menunggu';
-            
-            gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-on');
-            gpsStatusIndicator.classList.add('gps-status-off');
+            gpsStatusIndicator.className = 'gps-status-indicator gps-status-off';
         }
-        
-        // Setup new geofence area
         function setupGeofenceArea() {
-            if (!navigator.geolocation) {
-                showMessage('GPS Tidak Support', 'Browser Anda tidak mendukung geolocation.', true);
-                return;
-            }
-            
+            if (!navigator.geolocation) return showMessage('GPS Tidak Support', 'Browser tidak mendukung geolocation.', true);
             geofenceSetupModal.classList.replace('hidden', 'flex');
-            
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const accuracy = position.coords.accuracy;
-                    setupAccuracy.textContent = `${accuracy.toFixed(1)} m`;
-                    
-                    if (accuracy > 50) {
-                        showMessage('Akurasi Rendah', 'Akurasi GPS sedang rendah. Pastikan sinyal GPS baik untuk hasil terbaik.', true);
-                    }
-                    
-                    currentGeofence = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        radius: GEOFENCE_RADIUS,
-                        accuracy: accuracy,
-                        timestamp: new Date().toISOString()
-                    };
+                    setupAccuracy.textContent = `${position.coords.accuracy.toFixed(1)} m`;
+                    currentGeofence = { latitude: position.coords.latitude, longitude: position.coords.longitude, radius: GEOFENCE_RADIUS };
                 },
                 (error) => {
-                    console.error('Error getting location for geofence setup:', error);
-                    showMessage('Error', 'Gagal mendapatkan lokasi untuk setup area.', true);
+                    showMessage('Error', 'Gagal mendapatkan lokasi untuk setup.', true);
                     geofenceSetupModal.classList.replace('flex', 'hidden');
                 },
                 GEOLOCATION_OPTIONS
             );
         }
-        
-        // Save geofence area
-        async function saveGeofenceArea() {
-            if (!currentGeofence) {
-                showMessage('Error', 'Tidak ada data lokasi yang valid.', true);
-                return;
-            }
-            
+        function saveGeofenceArea() {
+            if (!currentGeofence) return showMessage('Error', 'Tidak ada data lokasi yang valid.', true);
             localStorage.setItem('geofenceArea', JSON.stringify(currentGeofence));
-            
             geofenceCoords.classList.remove('hidden');
             geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
             geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-            
-            const backgroundRegistered = await registerBackgroundGeofence(currentGeofence);
-            
-            if (backgroundRegistered) {
-                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang diaktifkan.');
-            } else {
-                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang tidak didukung.');
-            }
-            
             geofenceSetupModal.classList.replace('flex', 'hidden');
-            
-            const session = getActiveSession();
-            if (session) {
-                startGeofenceMonitoring();
-            }
+            showMessage('Berhasil', 'Area muatan berhasil disimpan!');
+            if (getActiveSession()) startGeofenceMonitoring();
         }
-        
-        // Load saved geofence from localStorage
         function loadGeofence() {
             const savedGeofence = localStorage.getItem('geofenceArea');
             if (savedGeofence) {
@@ -1246,129 +752,48 @@
                 geofenceCoords.classList.remove('hidden');
                 geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
                 geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-                
-                registerBackgroundGeofence(currentGeofence);
             }
         }
 
-        // --- LOGIKA SINKRONISASI & DATA ---
+        // --- SINKRONISASI DATA ---
         async function syncToServer() {
-            if (!navigator.onLine || !_supabase || !currentUser) {
-                console.log('Tidak dapat sinkron: offline atau tidak terautentikasi');
-                return;
-            }
-            
+            if (!navigator.onLine || !_supabase || !currentUser) return;
             console.log("Memulai sinkronisasi...");
             const { creations, deletions } = await localDb.getPending(currentUser.nik);
-            
             if (deletions.length > 0) {
-                try {
-                    const { error } = await _supabase.from('reports').delete().in('id', deletions.map(r => r.id));
-                    if (!error) {
-                        for (const report of deletions) await localDb.deleteReport(report.id);
-                    } else {
-                        console.error("Gagal menghapus laporan di server:", error);
-                    }
-                } catch (error) {
-                    console.error("Error saat menghapus laporan:", error);
-                }
+                const { error } = await _supabase.from('reports').delete().in('id', deletions.map(r => r.id));
+                if (!error) for (const report of deletions) await localDb.deleteReport(report.id);
             }
-            
             if (creations.length > 0) {
-                try {
-                    const reportsToCreate = creations.map(r => { 
-                        const { status, ...d } = r; 
-                        if (d.fuel_logs && typeof d.fuel_logs !== 'string') {
-                            d.fuel_logs = JSON.stringify(d.fuel_logs);
-                        }
-                        if (d.ritase && typeof d.ritase !== 'string') {
-                            d.ritase = JSON.stringify(d.ritase);
-                        }
-                        return d; 
-                    });
-                    
-                    const { error } = await _supabase.from('reports').upsert(reportsToCreate, { onConflict: 'id' });
-                    if (!error) {
-                        for (const report of creations) {
-                            report.status = 'synced';
-                            await localDb.saveReport(report);
-                        }
-                    } else {
-                         console.error("Gagal membuat/memperbarui laporan di server:", error);
-                    }
-                } catch (error) {
-                    console.error("Error saat membuat/memperbarui laporan:", error);
+                const reportsToCreate = creations.map(r => { 
+                    const { status, ...d } = r;
+                    d.fuel_logs = JSON.stringify(d.fuel_logs || []);
+                    d.ritase = JSON.stringify(d.ritase || {});
+                    return d;
+                });
+                const { error } = await _supabase.from('reports').upsert(reportsToCreate, { onConflict: 'id' });
+                if (!error) for (const report of creations) {
+                    report.status = 'synced';
+                    await localDb.saveReport(report);
                 }
             }
-            
-            await syncBackgroundRitase();
             await fetchFromServer();
             await updateDashboardView();
             console.log("Sinkronisasi selesai.");
         }
-
-        // Sinkronkan ritase latar belakang
-        async function syncBackgroundRitase() {
-            try {
-                const backgroundRitase = await localDb.getBackgroundRitase();
-                if (backgroundRitase.length > 0) {
-                    console.log(`Menyinkronkan ${backgroundRitase.length} ritase latar belakang`);
-                    
-                    const session = getActiveSession();
-                    if (session) {
-                        for (const ritase of backgroundRitase) {
-                            if (ritase.type === 'background_ritase_leave') {
-                                const ritaseDate = new Date(ritase.timestamp);
-                                const hourKey = ritaseDate.getHours().toString().padStart(2, '0') + ':00';
-                                const minutes = ritaseDate.getMinutes();
-                                
-                                if (session.ritase.hasOwnProperty(hourKey)) {
-                                    session.ritase[hourKey].push(minutes);
-                                }
-                            }
-                        }
-                        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-                        
-                        if (formContainer.classList.contains('hidden') === false) {
-                            renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
-                            updateRitaseSummary(session.ritase, session.tanggal, session.shift);
-                        }
-                    }
-                    
-                    await localDb.clearBackgroundRitase();
-                }
-            } catch (error) {
-                console.error('Gagal menyinkronkan ritase latar belakang:', error);
-            }
-        }
-
         async function fetchFromServer() {
-            if (!navigator.onLine || !_supabase || !currentUser) { return; }
-            
-            try {
-                const { data: serverReports, error } = await _supabase.from('reports').select('*').eq('user_nik', currentUser.nik);
-                if (error) { 
-                    console.error("Gagal mengambil data dari server:", error);
-                    return;
-                }
-                
-                for(const serverReport of serverReports) {
-                    serverReport.status = 'synced';
-                    if (serverReport.ritase && typeof serverReport.ritase === 'string') {
-                        try { serverReport.ritase = JSON.parse(serverReport.ritase); } catch(e) { serverReport.ritase = {}; }
-                    }
-                     if (serverReport.fuel_logs && typeof serverReport.fuel_logs === 'string') {
-                        try { serverReport.fuel_logs = JSON.parse(serverReport.fuel_logs); } catch(e) { serverReport.fuel_logs = []; }
-                    }
-                    await localDb.saveReport(serverReport);
-                }
-            } catch (error) {
-                console.error("Error saat fetch dari server:", error);
+            if (!navigator.onLine || !_supabase || !currentUser) return;
+            const { data: serverReports, error } = await _supabase.from('reports').select('*').eq('user_nik', currentUser.nik);
+            if (error) { console.error("Gagal mengambil data:", error); return; }
+            for (const serverReport of serverReports) {
+                serverReport.status = 'synced';
+                try { serverReport.ritase = JSON.parse(serverReport.ritase); } catch(e) { serverReport.ritase = {}; }
+                try { serverReport.fuel_logs = JSON.parse(serverReport.fuel_logs); } catch(e) { serverReport.fuel_logs = []; }
+                await localDb.saveReport(serverReport);
             }
         }
-
-        // --- LOGIKA AUTENTIKASI DENGAN NIK ---
         
+        // --- LOGIKA AUTENTIKASI ---
         function checkLoginState() {
             const userJSON = localStorage.getItem(USER_KEY);
             if (userJSON) {
@@ -1379,45 +804,21 @@
                 appPage.classList.add('hidden');
             }
         }
-
         async function initializeAppUI() {
             authPage.classList.add('hidden');
             appPage.classList.remove('hidden');
             userNameEl.innerHTML = sanitizeHTML(currentUser.full_name);
             userNikEl.innerHTML = `NIK: ${sanitizeHTML(currentUser.nik)}`;
-            
-            // Jika offline, langsung tampilkan data lokal
-            if (!navigator.onLine) {
-                await updateDashboardView();
-                showMessage('Mode Offline', 'Anda sedang offline. Bekerja dengan data lokal.', false);
-            } else {
-                await syncToServer();
-                await updateDashboardView();
-            }
-            
+            if (navigator.onLine) await syncToServer();
+            await updateDashboardView();
             loadGeofence();
-            
-            if ('Notification' in window) {
-                Notification.requestPermission();
-            }
+            updateConnectionStatus();
         }
-
-        // ... [KODE LAINNYA TIDAK BERUBAH] ...
-        // ... semua fungsi dan event listener yang sebelumnya ...
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nik = el('#login-nik').value.toUpperCase();
-            if (!nik) {
-                showMessage('Login Gagal', 'NIK tidak boleh kosong.', true);
-                return;
-            }
-
-            const { data, error } = await _supabase
-                .from('profiles')
-                .select('nik, full_name')
-                .eq('nik', nik)
-                .single();
-
+            if (!nik) return showMessage('Login Gagal', 'NIK tidak boleh kosong.', true);
+            const { data, error } = await _supabase.from('profiles').select('nik, full_name').eq('nik', nik).single();
             if (error || !data) {
                 showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
             } else {
@@ -1426,375 +827,210 @@
                 initializeAppUI();
             }
         });
-
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const fullName = el('#register-name').value;
             const nik = el('#register-nik').value.toUpperCase();
-
-            if (!fullName || !nik) {
-                showMessage('Pendaftaran Gagal', 'Nama dan NIK tidak boleh kosong.', true);
-                return;
-            }
-
-            const { data: existingUser, error: checkError } = await _supabase
-                .from('profiles')
-                .select('nik')
-                .eq('nik', nik)
-                .single();
-
-            if (existingUser) {
-                showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
-                return;
-            }
-
-            const { error } = await _supabase.from('profiles').insert([
-                { nik: nik, full_name: fullName }
-            ]);
-            
+            if (!fullName || !nik) return showMessage('Pendaftaran Gagal', 'Nama dan NIK tidak boleh kosong.', true);
+            const { data: existingUser } = await _supabase.from('profiles').select('nik').eq('nik', nik).single();
+            if (existingUser) return showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar.', true);
+            const { error } = await _supabase.from('profiles').insert([{ nik, full_name: fullName }]);
             if (error) {
                 showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
             } else {
-                showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
-                registerForm.reset();
+                showMessage('Pendaftaran Berhasil', 'Akun berhasil dibuat. Silakan masuk.');
                 showLoginLink.click();
             }
         });
-
         logoutBtn.addEventListener('click', () => {
             currentUser = null;
             localStorage.removeItem(USER_KEY);
             localStorage.removeItem(SESSION_KEY);
             window.location.reload();
         });
-
         showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); });
         showLoginLink.addEventListener('click', (e) => { e.preventDefault(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
-        
+
         // --- LOGIKA INTI APLIKASI ---
-        
         async function updateDashboardView() {
-            if (!currentUser) {
-                dashboardContainer.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                return;
-            };
-
+            if (!currentUser) return;
             renderActiveSessionCard();
-
-            allReports = await localDb.getReports(currentUser.nik) || [];
-            allReports = allReports.filter(r => r.status !== 'pending_deletion');
+            allReports = (await localDb.getReports(currentUser.nik) || []).filter(r => r.status !== 'pending_deletion');
             allReports.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-            
-            const hasAnyReport = allReports.length > 0;
-            emptyState.classList.toggle('hidden', hasAnyReport || getActiveSession());
-
-            if (hasAnyReport) {
-                populateMainMonthFilter();
-                const selectedMonth = mainMonthFilter.value || (allReports[0] ? allReports[0].tanggal.substring(0, 7) : '');
-                if (mainMonthFilter.value !== selectedMonth) mainMonthFilter.value = selectedMonth;
-                const filtered = allReports.filter(r => r.tanggal.startsWith(selectedMonth));
-                renderFilteredReports(filtered);
-            } else {
-                renderFilteredReports([]);
-            }
+            emptyState.classList.toggle('hidden', allReports.length > 0 || getActiveSession());
+            populateMainMonthFilter();
+            const selectedMonth = mainMonthFilter.value || (allReports.length > 0 ? allReports[0].tanggal.substring(0, 7) : '');
+            if (mainMonthFilter.value !== selectedMonth) mainMonthFilter.value = selectedMonth;
+            renderFilteredReports(allReports.filter(r => r.tanggal.startsWith(selectedMonth)));
         }
-        
         function renderActiveSessionCard() {
             activeSessionContainer.innerHTML = '';
             const session = getActiveSession();
             if (session) {
                 const ritaseCount = Object.values(session.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                const cardHTML = `
-                <div class="glass-card p-5 cursor-pointer bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-lg border-purple-400" data-action="resume-session">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold flex items-center gap-3">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            Sesi Aktif
-                        </h3>
-                        <span class="font-bold text-sm bg-white/20 px-3 py-1 rounded-full">LANJUTKAN</span>
+                activeSessionContainer.innerHTML = `
+                <div class="glass-card p-5 cursor-pointer bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-lg" data-action="resume-session">
+                    <div class="flex justify-between items-center"><h3 class="text-xl font-bold flex items-center gap-3"><i class="fas fa-spinner fa-spin"></i> Sesi Aktif</h3><span class="font-bold text-sm bg-white/20 px-3 py-1 rounded-full">LANJUTKAN</span></div>
+                    <div class="mt-4 pt-4 border-t border-white/20 text-sm grid grid-cols-2 gap-2">
+                        <div><strong>Unit:</strong> ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)}</div><div><strong>Shift:</strong> ${sanitizeHTML(session.shift)}</div>
+                        <div><strong>Muatan:</strong> ${sanitizeHTML(session.jenisMuatan)}</div><div><strong>Ritase:</strong> ${ritaseCount}</div>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white/20 text-sm grid grid-cols-2 gap-x-4 gap-y-2">
-                        <div><strong>Unit:</strong> ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)}</div>
-                        <div><strong>Shift:</strong> ${sanitizeHTML(session.shift)}</div>
-                        <div><strong>Muatan:</strong> ${sanitizeHTML(session.jenisMuatan)}</div>
-                        <div><strong>Ritase Dicatat:</strong> ${ritaseCount}</div>
-                    </div>
-                </div>
-                `;
-                activeSessionContainer.innerHTML = cardHTML;
+                </div>`;
             }
         }
-
         activeSessionContainer.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="resume-session"]')) {
                 const session = getActiveSession();
-                if (session) {
-                    resumeSession(session);
-                }
+                if (session) resumeSession(session);
             }
         });
-
         function resumeSession(session) {
             showView('form');
             step1Div.classList.add('hidden');
             step2Div.classList.remove('hidden');
-            
-            step1Summary.innerHTML = `
-                Unit ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)} (${formatDate(session.tanggal, true)}) <br> 
-                <span class="font-semibold">HM Awal:</span> ${sanitizeHTML(session.hmAwal)} | <span class="font-semibold">KM Awal:</span> ${sanitizeHTML(session.kmAwal)}
-            `;
-            
+            step1Summary.innerHTML = `Unit ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)} (${formatDate(session.tanggal, true)}) <br> HM Awal: ${sanitizeHTML(session.hmAwal)} | KM Awal: ${sanitizeHTML(session.kmAwal)}`;
             renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
             updateRitaseSummary(session.ritase, session.tanggal, session.shift);
             renderFuelLogHistory(session.fuel_logs || []);
-
             updateClock();
             if (clockInterval) clearInterval(clockInterval);
             clockInterval = setInterval(updateClock, 1000);
-
-            hmAkhirInput.min = parseFloat(session.hmAwal) + 0.01;
-            kmAkhirInput.min = parseFloat(session.kmAwal) + 0.01;
-            
-            // Start GPS monitoring if geofence is set
-            if (currentGeofence) {
-                startGeofenceMonitoring();
-            }
+            if (currentGeofence) startGeofenceMonitoring();
         }
-
         timesheetForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const session = getActiveSession();
-            if (!session) {
-                showMessage('Sesi Tidak Ditemukan', 'Tidak ada sesi aktif untuk diselesaikan.', true);
-                return;
-            }
-
-            const hmAkhir = parseFloat(hmAkhirInput.value);
-            const kmAkhir = parseFloat(kmAkhirInput.value);
-            const hmAwal = parseFloat(session.hmAwal);
-
-            if (isNaN(hmAkhir) || isNaN(kmAkhir) || hmAkhir <= hmAwal) { 
-                showMessage('Data Tidak Valid', 'HM Akhir dan KM Akhir harus angka valid. HM Akhir harus lebih besar dari HM Awal.', true); return; 
-            }
-            
-            let newReport = {
-                id: crypto.randomUUID(),
-                user_nik: currentUser.nik,
-                nama_operator: currentUser.full_name,
-                tanggal: session.tanggal, 
-                shift: session.shift, 
-                jenis_muatan: session.jenisMuatan,
-                unit_type: session.unitType,
-                unit_id: session.unitId,
-                hm_awal_start: session.hmAwal,
-                km_awal_start: session.kmAwal,
-                note: sanitizeHTML(el('#note').value),
-                ritase: session.ritase,
-                fuel_logs: session.fuel_logs || [],
-                status: 'pending_creation',
-                hm_akhir: hmAkhir,
-                km_akhir: kmAkhir,
-                jam_kerja: hmAkhir - hmAwal
+            if (!session) return;
+            const hmAkhir = parseFloat(hmAkhirInput.value), kmAkhir = parseFloat(kmAkhirInput.value), hmAwal = parseFloat(session.hmAwal);
+            if (isNaN(hmAkhir) || isNaN(kmAkhir) || hmAkhir <= hmAwal) return showMessage('Data Tidak Valid', 'HM/KM Akhir harus angka valid dan lebih besar dari awal.', true);
+            const newReport = {
+                id: crypto.randomUUID(), user_nik: currentUser.nik, nama_operator: currentUser.full_name,
+                tanggal: session.tanggal, shift: session.shift, jenis_muatan: session.jenisMuatan,
+                unit_type: session.unitType, unit_id: session.unitId,
+                hm_awal_start: session.hmAwal, km_awal_start: session.kmAwal,
+                note: sanitizeHTML(el('#note').value), ritase: session.ritase, fuel_logs: session.fuel_logs || [],
+                status: 'pending_creation', hm_akhir: hmAkhir, km_akhir: kmAkhir, jam_kerja: hmAkhir - hmAwal
             };
-            
             await localDb.saveReport(newReport);
             localStorage.removeItem(SESSION_KEY);
-            
-            // Stop GPS monitoring
             stopGeofenceMonitoring();
-            
-            await updateDashboardView(); 
+            await updateDashboardView();
             resetForm();
             showView('dashboard');
             showMessage('Sukses', 'Laporan kerja berhasil disimpan.');
             await syncToServer();
         });
-
         reportListContainer.addEventListener('click', async (e) => {
             const deleteBtn = e.target.closest('.delete-btn');
             const reportCard = e.target.closest('.report-card');
-            
             if (deleteBtn) {
                 e.stopPropagation();
                 const reportId = deleteBtn.dataset.id;
-                showConfirm('Konfirmasi Hapus', 'Apakah Anda yakin ingin menghapus laporan ini?', async () => {
+                showConfirm('Konfirmasi Hapus', 'Yakin ingin menghapus laporan ini?', async () => {
                     const report = allReports.find(r => r.id === reportId);
                     if (report) {
-                        if(report.status === 'pending_creation'){
-                             await localDb.deleteReport(reportId);
+                        if (report.status === 'pending_creation') {
+                            await localDb.deleteReport(reportId);
                         } else {
                             report.status = 'pending_deletion';
                             await localDb.saveReport(report);
                         }
                         await updateDashboardView();
-                        showMessage('Laporan Dihapus', 'Laporan telah ditandai untuk dihapus.');
+                        showMessage('Laporan Dihapus', 'Laporan ditandai untuk dihapus.');
                         await syncToServer();
                     }
                 });
             } else if (reportCard) {
-                const reportId = reportCard.dataset.reportId;
-                const report = allReports.find(r => r.id === reportId);
-                if (report) { showReportDetail(report); }
+                const report = allReports.find(r => r.id === reportCard.dataset.reportId);
+                if (report) showReportDetail(report);
             }
         });
-
-        window.addEventListener('online', syncToServer);
-        
         function renderFilteredReports(filteredReports) {
             reportListContainer.innerHTML = '';
-            const hasFilteredReports = filteredReports.length > 0;
-            noDataForMonth.classList.toggle('hidden', !hasFilteredReports);
-            totalCard.classList.toggle('hidden', !hasFilteredReports);
-            exportSection.classList.toggle('hidden', !hasFilteredReports);
-            
-            if (hasFilteredReports) {
+            const hasReports = filteredReports.length > 0;
+            noDataForMonth.classList.toggle('hidden', !hasReports);
+            totalCard.classList.toggle('hidden', !hasReports);
+            exportSection.classList.toggle('hidden', !hasReports);
+            if (hasReports) {
                 filteredReports.forEach(report => {
                     const card = document.createElement('div');
                     card.className = 'glass-card p-5 fade-in cursor-pointer report-card relative';
                     card.dataset.reportId = report.id;
                     const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
                     const muatanTagColor = report.jenis_muatan === 'COAL' ? 'bg-slate-800 text-white' : 'bg-amber-400 text-amber-900';
-                    const syncStatusIcon = report.status === 'pending_creation'
-                        ? `<i class="fas fa-cloud-upload-alt text-yellow-500 absolute top-4 left-4" title="Menunggu sinkronisasi"></i>`
-                        : '';
-                    
+                    const syncStatusIcon = report.status === 'pending_creation' ? `<i class="fas fa-cloud-upload-alt text-yellow-500 absolute top-4 left-4" title="Menunggu sinkronisasi"></i>` : '';
                     card.innerHTML = `
                         ${syncStatusIcon}
                         <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-bold text-lg">${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}</p>
-                                <p class="text-sm text-slate-500 dark:text-slate-400">${formatDate(report.tanggal, true)}</p>
-                            </div>
-                            <div class="text-right flex-shrink-0 ml-4">
-                                <span class="text-xs font-bold px-3 py-1 rounded-full ${muatanTagColor}">${sanitizeHTML(report.jenis_muatan)}</span>
-                                <p class="text-xs text-slate-400 mt-1">${sanitizeHTML(report.shift)}</p>
-                            </div>
+                            <div><p class="font-bold text-lg">${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}</p><p class="text-sm text-slate-500">${formatDate(report.tanggal, true)}</p></div>
+                            <div class="text-right flex-shrink-0 ml-4"><span class="text-xs font-bold px-3 py-1 rounded-full ${muatanTagColor}">${sanitizeHTML(report.jenis_muatan)}</span><p class="text-xs text-slate-400 mt-1">${sanitizeHTML(report.shift)}</p></div>
                         </div>
-                        <div class="mt-4 pt-4 border-t border-black/5 dark:border-white/5 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div>
-                                <p class="text-xs text-slate-500">Jam Efektif</p>
-                                <p class="font-black text-teal-500 text-2xl">${(report.jam_kerja || 0).toFixed(2)}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-500">Total Ritase</p>
-                                <p class="font-black text-indigo-500 text-2xl">${ritaseCount}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-500">HM (Awal-Akhir)</p>
-                                <p class="font-bold text-sm">${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-500">KM (Awal-Akhir)</p>
-                                <p class="font-bold text-sm">${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}</p>
-                            </div>
+                        <div class="mt-4 pt-4 border-t border-black/5 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div><p class="text-xs text-slate-500">Jam Efektif</p><p class="font-black text-teal-500 text-2xl">${(report.jam_kerja || 0).toFixed(2)}</p></div>
+                            <div><p class="text-xs text-slate-500">Total Ritase</p><p class="font-black text-indigo-500 text-2xl">${ritaseCount}</p></div>
+                            <div><p class="text-xs text-slate-500">HM</p><p class="font-bold text-sm">${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)}</p></div>
+                            <div><p class="text-xs text-slate-500">KM</p><p class="font-bold text-sm">${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}</p></div>
                         </div>
-                        <button data-id="${report.id}" class="delete-btn absolute -top-1 -right-1 text-slate-400 hover:text-rose-500 h-8 w-8 rounded-full bg-white dark:bg-slate-800 shadow-md hover:bg-rose-500/10 transition-colors flex items-center justify-center">
-                            <i class="fas fa-trash-alt fa-sm"></i>
-                        </button>
-                    `;
+                        <button data-id="${report.id}" class="delete-btn absolute -top-1 -right-1 text-slate-400 hover:text-rose-500 h-8 w-8 rounded-full bg-white dark:bg-slate-800 shadow-md flex items-center justify-center"><i class="fas fa-trash-alt fa-sm"></i></button>`;
                     reportListContainer.appendChild(card);
                 });
             }
-            const monthlyTotal = filteredReports.reduce((total, r) => total + (r.jam_kerja || 0), 0);
-            grandTotalJamEl.textContent = monthlyTotal.toFixed(2);
+            grandTotalJamEl.textContent = filteredReports.reduce((total, r) => total + (r.jam_kerja || 0), 0).toFixed(2);
         }
-
         function populateMainMonthFilter() {
             const currentFilterValue = mainMonthFilter.value;
             mainMonthFilter.innerHTML = '';
             if (allReports.length === 0) return;
-
             const availableMonths = [...new Set(allReports.map(r => r.tanggal.substring(0, 7)))];
-            
             availableMonths.forEach(monthStr => {
                 const option = document.createElement('option');
-                const date = new Date(monthStr + '-02T00:00:00Z'); // Gunakan Z untuk UTC
+                const date = new Date(monthStr + '-02T00:00:00Z');
                 option.value = monthStr;
                 option.textContent = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                 mainMonthFilter.appendChild(option);
             });
-
-            if (availableMonths.includes(currentFilterValue)) {
-                mainMonthFilter.value = currentFilterValue;
-            } else if (availableMonths.length > 0) {
-                mainMonthFilter.value = availableMonths[0];
-            }
+            mainMonthFilter.value = availableMonths.includes(currentFilterValue) ? currentFilterValue : availableMonths[0];
         }
-        mainMonthFilter.addEventListener('change', () => { 
-            const selectedMonth = mainMonthFilter.value;
-            const filtered = allReports.filter(r => r.tanggal.startsWith(selectedMonth));
-            renderFilteredReports(filtered);
-        });
-
+        mainMonthFilter.addEventListener('change', () => renderFilteredReports(allReports.filter(r => r.tanggal.startsWith(mainMonthFilter.value))));
         function resetForm() {
             timesheetForm.reset();
             const today = new Date();
             today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
             tanggalInput.value = today.toISOString().slice(0, 10);
-            
-            shiftInput.value = "";
-            jenisMuatanInput.value = "";
-            
+            shiftInput.value = ""; jenisMuatanInput.value = "";
             step2Div.classList.add('hidden');
             step1Div.classList.remove('hidden');
             if (clockInterval) clearInterval(clockInterval);
-            
-            // Stop GPS monitoring
             stopGeofenceMonitoring();
         }
-
         function getActiveSession() {
-            const savedSessionJSON = localStorage.getItem(SESSION_KEY);
-            if (!savedSessionJSON) return null;
-            try {
-                return JSON.parse(savedSessionJSON);
-            } catch (e) {
-                localStorage.removeItem(SESSION_KEY);
-                return null;
-            }
+            try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
         }
-
         startSessionBtn.addEventListener('click', () => {
             if (!tanggalInput.value || !shiftInput.value || !jenisMuatanInput.value || !hmAwalStartInput.value || !kmAwalStartInput.value || !unitTypeStartInput.value || !unitIdStartInput.value) {
-                showMessage('Data Kurang', 'Silakan isi semua kolom untuk memulai sesi.', true);
-                return;
+                return showMessage('Data Kurang', 'Silakan isi semua kolom untuk memulai sesi.', true);
             }
-
             const sessionData = {
-                id: `session_${Date.now()}`,
-                status: 'active',
-                tanggal: tanggalInput.value,
-                shift: shiftInput.value,
-                jenisMuatan: jenisMuatanInput.value,
-                unitType: unitTypeStartInput.value.toUpperCase(),
-                unitId: unitIdStartInput.value.toUpperCase(),
-                hmAwal: hmAwalStartInput.value,
-                kmAwal: kmAwalStartInput.value,
-                ritase: createInitialRitaseData(shiftInput.value),
-                fuel_logs: [],
+                tanggal: tanggalInput.value, shift: shiftInput.value, jenisMuatan: jenisMuatanInput.value,
+                unitType: unitTypeStartInput.value.toUpperCase(), unitId: unitIdStartInput.value.toUpperCase(),
+                hmAwal: hmAwalStartInput.value, kmAwal: kmAwalStartInput.value,
+                ritase: createInitialRitaseData(shiftInput.value), fuel_logs: [],
             };
-            
             localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
             resumeSession(sessionData);
         });
-
         function createInitialRitaseData(shift) {
-            const initialData = {};
+            const data = {};
             const startHour = (shift === 'Siang') ? 7 : 19;
             for (let i = 0; i < 12; i++) {
-                let hour = startHour + i;
-                if (hour >= 24) hour -= 24;
-                const hourString = hour.toString().padStart(2, '0') + ':00';
-                initialData[hourString] = [];
+                let hour = (startHour + i) % 24;
+                data[hour.toString().padStart(2, '0') + ':00'] = [];
             }
-            return initialData;
+            return data;
         }
-
         function sortRitaseHours(shift) {
             return (a, b) => {
-                let hourA = parseInt(a.split(':')[0]);
-                let hourB = parseInt(b.split(':')[0]);
+                let hourA = parseInt(a), hourB = parseInt(b);
                 if (shift === 'Malam') {
                     if (hourA < 7) hourA += 24;
                     if (hourB < 7) hourB += 24;
@@ -1802,191 +1038,95 @@
                 return hourA - hourB;
             };
         }
-
         function renderRitaseTable(container, ritaseData, shift) {
             container.innerHTML = '';
-            const hourKeys = Object.keys(ritaseData).sort(sortRitaseHours(shift));
-
-            hourKeys.forEach(hourKey => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/5 dark:hover:bg-white/5';
-                const ritaseEntries = ritaseData[hourKey] || [];
-                row.innerHTML = `
-                    <td class="p-3 font-medium">${hourKey}</td>
-                    <td class="p-3">${ritaseEntries.map(m => String(m).padStart(2, '0')).sort((a, b) => a - b).join(', ') || '<span class="text-slate-500">-</span>'}</td>
-                `;
-                container.appendChild(row);
+            Object.keys(ritaseData || {}).sort(sortRitaseHours(shift)).forEach(hourKey => {
+                const row = container.insertRow();
+                row.className = 'border-b border-black/5 dark:border-white/5 last:border-b-0';
+                row.innerHTML = `<td class="p-3 font-medium">${hourKey}</td><td class="p-3">${(ritaseData[hourKey] || []).map(m => String(m).padStart(2, '0')).sort((a, b) => a - b).join(', ') || '<span class="text-slate-500">-</span>'}</td>`;
             });
         }
-        function updateClock() {
+        function updateClock() { currentTimeEl.textContent = new Date().toLocaleTimeString('id-ID'); }
+        function recordRitase() {
             const session = getActiveSession();
             if (!session) return;
-            currentTimeEl.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const isWithinShift = checkIsWithinShift(session.shift);
-            recordRitaseBtn.disabled = !isWithinShift;
-            recordRitaseBtn.title = isWithinShift ? 'Catat waktu ritase saat ini' : 'Di luar jam shift yang dipilih';
-        }
-        function checkIsWithinShift(shift) {
-            const currentHour = new Date().getHours();
-            if (shift === 'Siang') {
-                return currentHour >= 7 && currentHour < 19;
-            } else if (shift === 'Malam') {
-                return currentHour >= 19 || currentHour < 7;
-            }
-            return false;
-        }
-        
-         function recordRitase() {
-            const session = getActiveSession();
-            if (!session) return;
-
             const now = new Date();
             const hourKey = now.getHours().toString().padStart(2, '0') + ':00';
-            const minutes = now.getMinutes();
-
             if (session.ritase.hasOwnProperty(hourKey)) {
-                session.ritase[hourKey].push(minutes);
+                session.ritase[hourKey].push(now.getMinutes());
                 renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
                 updateRitaseSummary(session.ritase, session.tanggal, session.shift);
                 localStorage.setItem(SESSION_KEY, JSON.stringify(session));
             } else {
-                 showMessage("Di Luar Jam Kerja", `Jam ${hourKey} tidak termasuk dalam shift yang dipilih.`, true);
+                 showMessage("Di Luar Jam Kerja", `Jam ${hourKey} tidak termasuk dalam shift.`, true);
             }
         }
-
         function updateRitaseSummary(ritaseData, sessionDate, sessionShift) {
             const allRitase = [];
-            const baseDate = new Date(sessionDate + 'T00:00:00');
-
-            Object.entries(ritaseData).forEach(([hourKey, minutes]) => {
-                const hour = parseInt(hourKey.split(':')[0]);
+            Object.entries(ritaseData || {}).forEach(([hourKey, minutes]) => {
+                const hour = parseInt(hourKey);
                 minutes.forEach(minute => {
-                    let ritaseDate = new Date(baseDate);
-                    if (sessionShift === 'Malam' && hour < 7) {
-                        ritaseDate.setDate(ritaseDate.getDate() + 1);
-                    }
-                    ritaseDate.setHours(hour, minute, 0, 0);
-                    allRitase.push(ritaseDate);
+                    let d = new Date(sessionDate + 'T00:00:00Z');
+                    if (sessionShift === 'Malam' && hour < 7) d.setUTCDate(d.getUTCDate() + 1);
+                    d.setUTCHours(hour, minute);
+                    allRitase.push(d);
                 });
             });
-
             allRitase.sort((a, b) => a - b);
-
             totalRitaseSummary.textContent = allRitase.length;
-
             if (allRitase.length > 1) {
                 let totalDiff = 0;
-                for (let i = 1; i < allRitase.length; i++) {
-                    totalDiff += (allRitase[i] - allRitase[i-1]);
-                }
+                for (let i = 1; i < allRitase.length; i++) totalDiff += (allRitase[i] - allRitase[i - 1]);
                 const avgDiffSeconds = (totalDiff / (allRitase.length - 1)) / 1000;
-                const avgMinutes = Math.floor(avgDiffSeconds / 60);
-                const avgSeconds = Math.round(avgDiffSeconds % 60);
-                cycleTimeSummary.textContent = `${avgMinutes}m ${avgSeconds}s`;
+                cycleTimeSummary.textContent = `${Math.floor(avgDiffSeconds / 60)}m ${Math.round(avgDiffSeconds % 60)}s`;
             } else {
                 cycleTimeSummary.textContent = '0m 0s';
             }
         }
-
         saveFuelBtn.addEventListener('click', () => {
             const session = getActiveSession();
             if (!session) return;
-
-            const hm = parseFloat(hmFuelInput.value);
-            const liter = parseFloat(fuelLiterInput.value);
-
-            if (isNaN(hm) || isNaN(liter) || hm <= 0 || liter <= 0) {
-                showMessage('Data Fuel Tidak Valid', 'HM dan Liter harus angka positif.', true);
-                return;
-            }
-
-            if (!session.fuel_logs) {
-                session.fuel_logs = [];
-            }
-            session.fuel_logs.push({ hm, liter, timestamp: new Date().toISOString() });
+            const hm = parseFloat(hmFuelInput.value), liter = parseFloat(fuelLiterInput.value);
+            if (isNaN(hm) || isNaN(liter) || hm <= 0 || liter <= 0) return showMessage('Data Fuel Tidak Valid', 'HM dan Liter harus angka positif.', true);
+            if (!session.fuel_logs) session.fuel_logs = [];
+            session.fuel_logs.push({ hm, liter });
             localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-            
             renderFuelLogHistory(session.fuel_logs);
-            hmFuelInput.value = '';
-            fuelLiterInput.value = '';
-            showMessage('Sukses', 'Catatan pengisian fuel berhasil disimpan.');
+            hmFuelInput.value = ''; fuelLiterInput.value = '';
+            showMessage('Sukses', 'Catatan fuel berhasil disimpan.');
         });
-
         function renderFuelLogHistory(fuelLogs) {
             fuelLogHistoryContainer.innerHTML = '';
             if (!fuelLogs || fuelLogs.length === 0) return;
-
             let historyHTML = '<h4 class="text-sm font-bold mt-4 mb-2">Riwayat Fuel:</h4><ul class="text-sm space-y-1">';
-            fuelLogs.forEach(log => {
-                historyHTML += `<li class="text-slate-600 dark:text-slate-300 p-2 rounded-md bg-slate-100 dark:bg-slate-700/50">- HM ${log.hm}: ${log.liter} Liter</li>`;
-            });
-            historyHTML += '</ul>';
-            fuelLogHistoryContainer.innerHTML = historyHTML;
+            fuelLogs.forEach(log => historyHTML += `<li class="p-2 rounded-md bg-slate-100 dark:bg-slate-700/50">- HM ${log.hm}: ${log.liter} Liter</li>`);
+            fuelLogHistoryContainer.innerHTML = historyHTML + '</ul>';
         }
-
         cancelSessionBtn.addEventListener('click', () => {
-            showConfirm('Batalkan Sesi?', 'Semua data ritase dan fuel yang belum disimpan akan hilang. Anda yakin?', () => {
+            showConfirm('Batalkan Sesi?', 'Semua data yang belum disimpan akan hilang. Yakin?', () => {
                 localStorage.removeItem(SESSION_KEY);
-                // Stop GPS monitoring
                 stopGeofenceMonitoring();
                 resetForm();
                 updateDashboardView();
                 showView('dashboard');
             });
         });
-
         newSessionBtn.addEventListener('click', () => {
-            const session = getActiveSession();
-            if (session) {
-                showMessage('Sesi Masih Aktif', 'Selesaikan atau batalkan sesi yang sedang berjalan sebelum memulai sesi baru.', true);
-                return;
-            }
+            if (getActiveSession()) return showMessage('Sesi Masih Aktif', 'Selesaikan atau batalkan sesi yang berjalan.', true);
             resetForm();
             showView('form');
         });
-
-        backToDashboardBtn.addEventListener('click', () => {
-            showView('dashboard');
-            updateDashboardView();
-        });
-
+        backToDashboardBtn.addEventListener('click', () => { showView('dashboard'); updateDashboardView(); });
         recordRitaseBtn.addEventListener('click', recordRitase);
-        
         function showReportDetail(report) {
             detailModalTitle.textContent = `Detail Laporan`;
-            let extraInfo = ` | Unit: ${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`;
-            if(report.hm_awal_start) {
-                extraInfo += `<br>HM: ${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)} | KM: ${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}`
-            }
-            detailModalInfo.innerHTML = `${formatDate(report.tanggal, true)}${extraInfo}`;
-            
-            let contentHTML = `
-                <div class="overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-white/10 shadow-inner">
-                    <h4 class="font-bold mb-2">Tabel Ritase</h4>
-                    <table class="w-full text-sm">
-                        <thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left w-1/4">Waktu</th><th class="p-2 font-semibold text-left">Ritase Tercatat (Menit)</th></tr></thead>
-                        <tbody id="detail-ritase-tbody"></tbody>
-                    </table>
-                </div>
-            `;
-
+            detailModalInfo.innerHTML = `${formatDate(report.tanggal, true)} | Unit: ${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`;
+            let contentHTML = `<div class="overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg"><h4 class="font-bold mb-2">Tabel Ritase</h4><table class="w-full text-sm"><thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">Waktu</th><th class="p-2 font-semibold text-left">Ritase (Menit)</th></tr></thead><tbody id="detail-ritase-tbody"></tbody></table></div>`;
             if (report.fuel_logs && report.fuel_logs.length > 0) {
-                contentHTML += `
-                <div class="mt-4 overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-white/10 shadow-inner">
-                    <h4 class="font-bold mb-2">Riwayat Pengisian Fuel</h4>
-                    <table class="w-full text-sm">
-                        <thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">HM</th><th class="p-2 font-semibold text-left">Liter</th></tr></thead>
-                        <tbody>
-                            ${report.fuel_logs.map(log => `<tr><td class="p-2">${log.hm}</td><td class="p-2">${log.liter} L</td></tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                `;
+                contentHTML += `<div class="mt-4 overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg"><h4 class="font-bold mb-2">Riwayat Fuel</h4><table class="w-full text-sm"><thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">HM</th><th class="p-2 font-semibold text-left">Liter</th></tr></thead><tbody>${report.fuel_logs.map(log => `<tr><td class="p-2">${log.hm}</td><td class="p-2">${log.liter} L</td></tr>`).join('')}</tbody></table></div>`;
             }
-
             detailModalContent.innerHTML = contentHTML;
             renderRitaseTable(el('#detail-ritase-tbody'), report.ritase, report.shift);
-
             detailModal.dataset.reportId = report.id;
             detailModal.classList.replace('hidden', 'flex');
         }
@@ -1999,14 +1139,13 @@
         messageModalCloseBtn.addEventListener('click', () => messageModal.classList.replace('flex', 'hidden'));
         closeDetailModalBtn.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
         closeDetailModalBtn2.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
+        confirmModalCancelBtn.addEventListener('click', () => confirmModal.classList.replace('flex', 'hidden'));
         confirmModalConfirmBtn.addEventListener('click', () => {
             if (typeof confirmCallback === 'function') confirmCallback();
             confirmModal.classList.replace('flex', 'hidden');
-            confirmCallback = null;
         });
         exportSinglePdfBtn.addEventListener('click', () => {
-             const reportId = detailModal.dataset.reportId;
-             const report = allReports.find(r => r.id === reportId);
+             const report = allReports.find(r => r.id === detailModal.dataset.reportId);
              if(report) exportSingleReportToPdf(report);
         });
         
@@ -2019,7 +1158,6 @@
              const greyColor = '#475569';
              let lastY = 0;
              
-             // Header
              doc.setFillColor(primaryColor);
              doc.rect(0, 0, pageW, 30, 'F');
              doc.setFont('helvetica', 'bold');
@@ -2027,87 +1165,63 @@
              doc.setTextColor(255, 255, 255);
              doc.text('LAPORAN KERJA HARIAN', pageW / 2, 18, { align: 'center' });
              
-             // Info Utama
              doc.setFontSize(11);
              doc.setTextColor(greyColor);
              doc.text(`Operator: ${sanitizeHTML(report.nama_operator.toUpperCase())}`, margin, 45);
              doc.text(`Tanggal: ${formatDate(report.tanggal, true)}`, pageW - margin, 45, { align: 'right' });
              lastY = 50;
              
-             const infoBody = [
-                 [{content: 'Unit', styles: {fontStyle: 'bold'}}, `${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`],
-                 [{content: 'Shift', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.shift)],
-                 [{content: 'Muatan', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.jenis_muatan)],
-                 [{content: 'Jam Kerja', styles: {fontStyle: 'bold'}}, `${(report.jam_kerja || 0).toFixed(2)} Jam`],
-             ];
-             
              doc.autoTable({
                  startY: lastY,
-                 body: infoBody,
-                 theme: 'plain',
-                 styles: { fontSize: 10, cellPadding: 1.5 },
-                 columnStyles: { 0: { cellWidth: 35 } }
+                 body: [
+                     [{content: 'Unit', styles: {fontStyle: 'bold'}}, `${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`],
+                     [{content: 'Shift', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.shift)],
+                     [{content: 'Muatan', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.jenis_muatan)],
+                     [{content: 'Jam Kerja', styles: {fontStyle: 'bold'}}, `${(report.jam_kerja || 0).toFixed(2)} Jam`],
+                 ],
+                 theme: 'plain', styles: { fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 35 } }
              });
              lastY = doc.lastAutoTable.finalY;
 
-             const meterBody = [
-                ['HM Awal', sanitizeHTML(report.hm_awal_start) || '-', 'KM Awal', sanitizeHTML(report.km_awal_start) || '-'],
-                ['HM Akhir', sanitizeHTML(report.hm_akhir) || '-', 'KM Akhir', sanitizeHTML(report.km_akhir) || '-'],
-             ];
-
              doc.autoTable({
                 startY: lastY,
-                body: meterBody,
-                theme: 'grid',
-                styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
-                headStyles: { fillColor: '#f1f5f9', textColor: greyColor, fontStyle: 'bold' },
-             })
+                body: [
+                    ['HM Awal', sanitizeHTML(report.hm_awal_start) || '-', 'KM Awal', sanitizeHTML(report.km_awal_start) || '-'],
+                    ['HM Akhir', sanitizeHTML(report.hm_akhir) || '-', 'KM Akhir', sanitizeHTML(report.km_akhir) || '-'],
+                ],
+                theme: 'grid', styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
+             });
              lastY = doc.lastAutoTable.finalY + 10;
 
-             // Tabel Ritase
              doc.setFont('helvetica', 'bold');
              doc.setFontSize(12);
              doc.setTextColor(greyColor);
              doc.text('Log Ritase', margin, lastY);
              lastY += 2;
 
-             const ritaseHead = [['Waktu', 'Ritase Tercatat (Menit)']];
-             const ritaseBody = Object.keys(report.ritase).sort(sortRitaseHours(report.shift))
+             const ritaseBody = Object.keys(report.ritase || {}).sort(sortRitaseHours(report.shift))
                 .map(hour => [hour, (report.ritase[hour] || []).map(m => String(m).padStart(2, '0')).sort((a,b) => a - b).join(', ')]);
              
              doc.autoTable({ 
-                 head: ritaseHead, 
-                 body: ritaseBody, 
-                 startY: lastY, 
-                 theme: 'striped', 
-                 headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, 
-                 styles: { cellPadding: 2, fontSize: 9, valign: 'top' }, 
+                 head: [['Waktu', 'Ritase Tercatat (Menit)']], body: ritaseBody, startY: lastY, theme: 'striped', 
+                 headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 2, fontSize: 9, valign: 'top' }, 
                  columnStyles: { 0: { cellWidth: 40 } } 
             });
              lastY = doc.lastAutoTable.finalY + 10;
 
-             // Tabel Fuel
              if (report.fuel_logs && report.fuel_logs.length > 0) {
                  doc.setFont('helvetica', 'bold');
                  doc.setFontSize(12);
                  doc.setTextColor(greyColor);
                  doc.text('Log Pengisian Fuel', margin, lastY);
                  lastY += 2;
-
-                 const fuelHead = [['HM Pengisian', 'Jumlah (Liter)']];
-                 const fuelBody = report.fuel_logs.map(log => [log.hm, log.liter]);
                  doc.autoTable({ 
-                     head: fuelHead, 
-                     body: fuelBody, 
-                     startY: lastY, 
-                     theme: 'striped', 
-                     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, 
-                     styles: { cellPadding: 2, fontSize: 9 } 
+                     head: [['HM Pengisian', 'Jumlah (Liter)']], body: report.fuel_logs.map(log => [log.hm, log.liter]), startY: lastY, theme: 'striped', 
+                     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 2, fontSize: 9 } 
                 });
                  lastY = doc.lastAutoTable.finalY + 10;
              }
              
-             // Catatan
              if(report.note) {
                  doc.setFont('helvetica', 'bold');
                  doc.setFontSize(12);
@@ -2119,7 +1233,6 @@
                  doc.text(doc.splitTextToSize(report.note, pageW - (margin * 2)), margin, lastY);
              }
 
-             // Footer
              const pageCount = doc.internal.getNumberOfPages();
              for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
@@ -2128,44 +1241,28 @@
                 doc.text(`Laporan dibuat oleh sistem pada ${new Date().toLocaleString('id-ID')}`, margin, doc.internal.pageSize.getHeight() - 10);
                 doc.text(`Halaman ${i} dari ${pageCount}`, pageW - margin, doc.internal.pageSize.getHeight() - 10, {align: 'right'});
              }
-
-             const safeFileName = `LaporanHarian_${report.tanggal}_${report.unit_id.replace(/[^a-z0-9]/gi, '_')}.pdf`;
-             doc.save(safeFileName);
+             doc.save(`LaporanHarian_${report.tanggal}_${report.unit_id.replace(/[^a-z0-9]/gi, '_')}.pdf`);
              showMessage('Berhasil!', `Laporan PDF berhasil dibuat!`);
         }
 
         function exportMonthlySummaryToPdf() {
             const selectedMonth = mainMonthFilter.value;
-            const filteredReports = allReports
-                .filter(r => r.tanggal.startsWith(selectedMonth))
-                .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+            const filteredReports = allReports.filter(r => r.tanggal.startsWith(selectedMonth)).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+            if (filteredReports.length === 0) return showMessage('Tidak Ada Data', 'Tidak ada data laporan untuk diexport.', true);
 
-            if (filteredReports.length === 0) {
-                showMessage('Tidak Ada Data', 'Tidak ada data laporan untuk diexport pada periode ini.', true);
-                return;
-            }
-
-            let totalJamKerja = 0;
-            let totalRitaseOB = 0;
-            let totalRitaseCOAL = 0;
-            
+            let totalJamKerja = 0, totalRitaseOB = 0, totalRitaseCOAL = 0;
             filteredReports.forEach(report => {
                 totalJamKerja += (report.jam_kerja || 0);
                 const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                if (report.jenis_muatan === 'OB') {
-                    totalRitaseOB += ritaseCount;
-                } else if (report.jenis_muatan === 'COAL') {
-                    totalRitaseCOAL += ritaseCount;
-                }
+                if (report.jenis_muatan === 'OB') totalRitaseOB += ritaseCount;
+                else if (report.jenis_muatan === 'COAL') totalRitaseCOAL += ritaseCount;
             });
 
             const gajiLembur = totalJamKerja * TARIF_PER_JAM;
             const bonusRitaseOB = totalRitaseOB * TARIF_RITASE_OB;
             const bonusRitaseCOAL = totalRitaseCOAL * TARIF_RITASE_COAL;
-            
             const potonganKesehatan = GAJI_POKOK * PERSEN_POTONGAN_KESEHATAN;
             const potonganKerja = GAJI_POKOK * PERSEN_POTONGAN_KERJA;
-
             const totalPendapatanKotor = GAJI_POKOK + gajiLembur + bonusRitaseOB + bonusRitaseCOAL;
             const totalPotongan = potonganKesehatan + potonganKerja;
             const pendapatanBersih = totalPendapatanKotor - totalPotongan;
@@ -2177,7 +1274,6 @@
             const periodDate = new Date(selectedMonth + '-02T00:00:00Z');
             const periodText = periodDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
             
-            // Header
             doc.setFillColor(primaryColor);
             doc.rect(0, 0, pageW, 30, 'F');
             doc.setFont('helvetica', 'bold');
@@ -2187,24 +1283,21 @@
             doc.setFontSize(12);
             doc.text(`Periode: ${periodText}`, pageW / 2, 23, { align: 'center' });
             
-            // Info Karyawan
             doc.setFontSize(10);
             doc.setTextColor(0,0,0);
             doc.text(`Nama: ${sanitizeHTML(currentUser.full_name)}`, 14, 40);
             doc.text(`NIK: ${sanitizeHTML(currentUser.nik)}`, 14, 45);
 
-            // Rincian Pendapatan
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('A. PENDAPATAN', 14, 60);
-            const pendapatanBody = [
-                ['Gaji Pokok', '', formatCurrency(GAJI_POKOK)],
-                ['Insentif HM (Lembur)', `${totalJamKerja.toFixed(2)} jam x ${formatCurrency(TARIF_PER_JAM)}`, formatCurrency(gajiLembur)],
-                ['Insentif OB', `${totalRitaseOB} rit x ${formatCurrency(TARIF_RITASE_OB)}`, formatCurrency(bonusRitaseOB)],
-                ['Insentif CG', `${totalRitaseCOAL} rit x ${formatCurrency(TARIF_RITASE_COAL)}`, formatCurrency(bonusRitaseCOAL)],
-            ];
             doc.autoTable({
-                body: pendapatanBody, startY: 65, theme: 'plain', styles: { fontSize: 10 },
+                body: [
+                    ['Gaji Pokok', '', formatCurrency(GAJI_POKOK)],
+                    ['Insentif HM (Lembur)', `${totalJamKerja.toFixed(2)} jam x ${formatCurrency(TARIF_PER_JAM)}`, formatCurrency(gajiLembur)],
+                    ['Insentif OB', `${totalRitaseOB} rit x ${formatCurrency(TARIF_RITASE_OB)}`, formatCurrency(bonusRitaseOB)],
+                    ['Insentif CG', `${totalRitaseCOAL} rit x ${formatCurrency(TARIF_RITASE_COAL)}`, formatCurrency(bonusRitaseCOAL)],
+                ], startY: 65, theme: 'plain', styles: { fontSize: 10 },
                 columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
             });
             let lastY = doc.lastAutoTable.finalY;
@@ -2212,17 +1305,15 @@
             doc.text('Total Pendapatan Kotor', 14, lastY + 5);
             doc.text(formatCurrency(totalPendapatanKotor), pageW - 14, lastY + 5, { align: 'right' });
 
-            // Rincian Potongan
             lastY += 15;
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('B. POTONGAN', 14, lastY);
-            const potonganBody = [
-                ['BPJS Kesehatan (1%)', '', formatCurrency(potonganKesehatan)],
-                ['BPJS Ketenagakerjaan (3%)', '', formatCurrency(potonganKerja)],
-            ];
             doc.autoTable({
-                body: potonganBody, startY: lastY + 5, theme: 'plain', styles: { fontSize: 10 },
+                body: [
+                    ['BPJS Kesehatan (1%)', '', formatCurrency(potonganKesehatan)],
+                    ['BPJS Ketenagakerjaan (3%)', '', formatCurrency(potonganKerja)],
+                ], startY: lastY + 5, theme: 'plain', styles: { fontSize: 10 },
                 columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
             });
             lastY = doc.lastAutoTable.finalY;
@@ -2230,7 +1321,6 @@
             doc.text('Total Potongan', 14, lastY + 5);
             doc.text(formatCurrency(totalPotongan), pageW - 14, lastY + 5, { align: 'right' });
 
-            // Take Home Pay
             lastY += 15;
             doc.setFillColor(230, 240, 255);
             doc.rect(14, lastY - 5, pageW - 28, 12, 'F');
@@ -2249,41 +1339,22 @@
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('Lampiran: Log Kerja Harian', 14, 20);
-            const detailHead = [['Tanggal', 'Unit', 'Tipe', 'Jam Kerja', 'Jml Ritase']];
             const detailBody = filteredReports.map(report => {
                 const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
                 return [ formatDate(report.tanggal), `${report.unit_type} ${report.unit_id}`, report.jenis_muatan, (report.jam_kerja || 0).toFixed(2), ritaseCount ];
             });
-            doc.autoTable({ head: detailHead, body: detailBody, startY: 25, theme: 'striped', headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 9 }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } } });
+            doc.autoTable({ head: [['Tanggal', 'Unit', 'Tipe', 'Jam Kerja', 'Jml Ritase']], body: detailBody, startY: 25, theme: 'striped', headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 9 }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } } });
 
-            const safeUserName = (userNameEl.textContent || 'operator').replace(/[^a-z0-9]/gi, '_');
-            const safeFileName = `SlipGaji_${safeUserName}_${selectedMonth}.pdf`;
-            doc.save(safeFileName);
+            const safeUserName = (currentUser.full_name || 'operator').replace(/[^a-z0-9]/gi, '_');
+            doc.save(`SlipGaji_${safeUserName}_${selectedMonth}.pdf`);
             showMessage('Berhasil!', 'Slip Gaji PDF berhasil dibuat!');
         }
         
         exportPdfBtn.addEventListener('click', exportMonthlySummaryToPdf);
-
-        // --- GPS Auto-Ritase Event Listeners ---
         setupGeofenceBtn.addEventListener('click', setupGeofenceArea);
-        
-        toggleGpsBtn.addEventListener('click', () => {
-            if (isMonitoringGeofence) {
-                stopGeofenceMonitoring();
-            } else {
-                startGeofenceMonitoring();
-            }
-        });
-        
-        cancelSetupBtn.addEventListener('click', () => {
-            geofenceSetupModal.classList.replace('flex', 'hidden');
-        });
-        
+        toggleGpsBtn.addEventListener('click', () => isMonitoringGeofence ? stopGeofenceMonitoring() : startGeofenceMonitoring());
+        cancelSetupBtn.addEventListener('click', () => geofenceSetupModal.classList.replace('flex', 'hidden'));
         saveGeofenceBtn.addEventListener('click', saveGeofenceArea);
-        
-        loadGeofence();
-        
-        checkLoginState();
     });
     </script>
 </body>
