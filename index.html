@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard TimeSheet PT.EPM</title>
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+    <meta name="theme-color" content="#0d9488">
+
+    <!-- Aset Lokal untuk Akses Offline -->
+    <script src="./js/tailwindcss.js"></script>
+    <link href="./css/inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/fontawesome.min.css">
+    
+    <!-- Import Supabase Client Library (Online) -->
+    <script src="./js/supabase.min.js"></script>
+    
+    <!-- Library PDF Lokal -->
+    <script src="./js/jspdf.umd.min.js"></script>
+    <script src="./js/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-light: #f0f5f9; --card-light: rgba(255, 255, 255, 0.7); --text-light: #1e293b; --border-light: rgba(203, 213, 225, 0.5);
+            --primary: #0d9488; --secondary: #6366f1; --danger: #f43f5e;
+            --bg-dark: #0f172a; --card-dark: rgba(30, 41, 59, 0.7); --text-dark: #e2e8f0; --border-dark: rgba(51, 65, 85, 0.5);
+        }
+        html.dark { color-scheme: dark; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.5s ease, color 0.5s ease; }
+        html.dark body { background-color: var(--bg-dark); color: var(--text-dark); }
+        .glass-card { background: var(--card-light); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 1.5rem; border: 1px solid var(--border-light); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1); transition: all 0.5s ease; }
+        html.dark .glass-card { background: var(--card-dark); border: 1px solid var(--border-dark); }
+        .form-input-group { position: relative; }
+        .form-input { width: 100%; border: 1px solid transparent; border-radius: 0.75rem; padding: 1rem 1rem 1rem 2.75rem; font-size: 1rem; background-color: rgba(128, 128, 128, 0.1); color: var(--text-light); transition: all 0.3s ease; }
+        html.dark .form-input { background-color: rgba(255, 255, 255, 0.05); color: var(--text-dark); }
+        .form-input:focus { outline: none; border-color: var(--primary); background-color: transparent; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.2); }
+        .form-input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; transition: color 0.3s ease; }
+        .form-input-group:focus-within .form-input-icon { color: var(--primary); }
+        .btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 1rem; border-radius: 0.75rem; font-weight: 700; transition: all 0.3s ease; border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
+        .btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); }
+        .btn:active:not(:disabled) { transform: scale(0.98); box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-image: linear-gradient(to right, var(--primary), #14b8a6); color: white; }
+        .btn-secondary { background-image: linear-gradient(to right, var(--secondary), #818cf8); color: white; }
+        .btn-danger { background-image: linear-gradient(to right, var(--danger), #fb7185); color: white; }
+        .btn-gray { background-color: #e2e8f0; color: #334152; box-shadow: none; }
+        html.dark .btn-gray { background-color: #334152; color: #e2e8f0; }
+        .section-title { font-size: 1.5rem; font-weight: 800; color: inherit; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .section-title i { color: var(--primary); }
+        .modal-bg { background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); }
+        .uppercase { text-transform: uppercase; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .background-shapes div { position: absolute; border-radius: 50%; background-image: linear-gradient(to bottom right, var(--primary), var(--secondary)); opacity: 0.1; z-index: -1; }
+        #install-btn { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 100; width: auto; padding: 0.75rem 1.5rem; border-radius: 2rem; font-weight: 700; }
+        
+        /* GPS Tracking Styles */
+        .gps-status-card {
+            transition: all 0.3s ease;
+        }
+        .gps-active {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+        .gps-inactive {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+        .geofence-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .geofence-active {
+            background-color: #10b981;
+        }
+        .geofence-inactive {
+            background-color: #ef4444;
+        }
+        .accuracy-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px dashed #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .gps-status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .gps-status-on {
+            background-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+        }
+        .gps-status-off {
+            background-color: #ef4444;
+        }
+        .gps-status-acquiring {
+            background-color: #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+        .gps-debug {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        .radius-badge {
+            background-color: #3b82f6;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+
+        /* Optimasi untuk mobile */
+        @media (max-width: 768px) {
+            .glass-card {
+                border-radius: 1rem;
+                padding: 1rem;
+            }
+            .section-title {
+                font-size: 1.25rem;
+            }
+            .form-input {
+                padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tombol Instal PWA -->
+    <button id="install-btn" class="btn btn-secondary hidden">
+        <i class="fas fa-download mr-2"></i>
+        Install Aplikasi
+    </button>
+
+    <!-- Hiasan Latar Belakang -->
+    <div class="background-shapes fixed top-0 left-0 w-full h-full overflow-hidden z-[-1]">
+        <div style="width: 200px; height: 200px; top: 10%; left: 5%;"></div>
+        <div style="width: 300px; height: 300px; top: 60%; right: -150px;"></div>
+        <div style="width: 150px; height: 150px; bottom: 20%; left: 20%;"></div>
+    </div>
+
+    <!-- Halaman Autentikasi -->
+    <div id="auth-page" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <h1 class="font-black text-4xl text-center mb-2">Time Sheet<span>PT<span class="text-teal-500">.</span>EPM</h1>
+            <p class="text-center text-slate-500 mb-8">Silakan masuk atau daftar untuk melanjutkan</p>
+            
+            <div class="glass-card p-8">
+                <!-- Form Login dengan NIK -->
+                <form id="login-form" class="">
+                    <h2 class="text-2xl font-bold mb-6">Masuk</h2>
+                    <div class="space-y-4">
+                        <div class="form-input-group"><i class="fas fa-id-card form-input-icon"></i><input type="text" id="login-nik" class="form-input uppercase" placeholder="Nomor Induk Karyawan (NIK)" required></div>
+                        <button type="submit" class="btn btn-primary w-full !py-3">Masuk</button>
+                    </div>
+                    <p class="text-center text-sm mt-6">Belum punya akun? <a href="#" id="show-register-link" class="font-bold text-teal-500 hover:underline">Daftar di sini</a></p>
+                </form>
+
+                <!-- Form Register dengan NIK dan Nama -->
+                <form id="register-form" class="hidden">
+                    <h2 class="text-2xl font-bold mb-6">Daftar Akun Baru</h2>
+                    <div class="space-y-4">
+                        <div class="form-input-group"><i class="fas fa-user form-input-icon"></i><input type="text" id="register-name" class="form-input" placeholder="Nama Lengkap" required></div>
+                        <div class="form-input-group"><i class="fas fa-id-card form-input-icon"></i><input type="text" id="register-nik" class="form-input uppercase" placeholder="Nomor Induk Karyawan (NIK)" required></div>
+                        <button type="submit" class="btn btn-secondary w-full !py-3">Daftar</button>
+                    </div>
+                    <p class="text-center text-sm mt-6">Sudah punya akun? <a href="#" id="show-login-link" class="font-bold text-teal-500 hover:underline">Masuk di sini</a></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Halaman Aplikasi Utama -->
+    <div id="app-page" class="hidden container mx-auto max-w-5xl p-4 md:p-6 pb-24">
+        <!-- [KODE HTML UTAMA TIDAK BERUBAH] -->
+        <!-- ... semua elemen HTML yang sebelumnya ... -->
+    </div>
+
+    <script>
+    // --- Inisialisasi Supabase & Variabel Global ---
+    const SUPABASE_URL = 'https://hwajcditsdmebqmflqsm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
+
+    // --- Konstanta Gaji ---
+    const GAJI_POKOK = 3703206;
+    const TARIF_PER_JAM = 15000;
+    const TARIF_RITASE_OB = 400;
+    const TARIF_RITASE_COAL = 1250;
+    const PERSEN_POTONGAN_KESEHATAN = 0.01; // 1%
+    const PERSEN_POTONGAN_KERJA = 0.03; // 3%
+
+    let _supabase;
+    if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('URL_ANDA')) {
+        const { createClient } = supabase;
+        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    // --- Logika Database IndexedDB ---
+    const DB_NAME = 'LaporanKerjaDB_v10_Offline';
+    const DB_VERSION = 1;
+    let db;
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('reports')) {
+                    const store = db.createObjectStore('reports', { keyPath: 'id' });
+                    store.createIndex('status', 'status', { unique: false });
+                    store.createIndex('user_nik', 'user_nik', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('backgroundRitase')) {
+                    db.createObjectStore('backgroundRitase', { autoIncrement: true });
+                }
+            };
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                console.log('Database IndexedDB berhasil diinisialisasi.');
+                resolve(db);
+            };
+            request.onerror = (event) => reject('Kesalahan database: ' + event.target.error);
+        });
+    }
+
+    function dbAction(storeName, mode, action) {
+        return new Promise((resolve, reject) => {
+            if (!db) { return reject("Database belum diinisialisasi"); }
+            try {
+                const transaction = db.transaction(storeName, mode);
+                const store = transaction.objectStore(storeName);
+                action(store, resolve, reject);
+                transaction.onerror = (event) => reject(event.target.error);
+            } catch (error) {
+                console.error("Gagal memulai transaksi DB:", error);
+                reject(error);
+            }
+        });
+    }
+
+    const localDb = {
+        getReports: (userNik) => dbAction('reports', 'readonly', (store, resolve) => {
+            const index = store.index('user_nik');
+            index.getAll(userNik).onsuccess = (e) => resolve(e.target.result);
+        }),
+        saveReport: (report) => dbAction('reports', 'readwrite', (store, resolve) => store.put(report).onsuccess = resolve),
+        deleteReport: (id) => dbAction('reports', 'readwrite', (store, resolve) => store.delete(id).onsuccess = resolve),
+        getPending: (userNik) => dbAction('reports', 'readonly', (store, resolve, reject) => { 
+            const index = store.index('status');
+            const creationsRequest = index.getAll('pending_creation');
+            const deletionsRequest = index.getAll('pending_deletion');
+            
+            Promise.all([
+                new Promise((res, rej) => { creationsRequest.onsuccess = e => res(e.target.result.filter(r => r.user_nik === userNik)); creationsRequest.onerror = e => rej(e.target.error); }),
+                new Promise((res, rej) => { deletionsRequest.onsuccess = e => res(e.target.result.filter(r => r.user_nik === userNik)); deletionsRequest.onerror = e => rej(e.target.error); })
+            ]).then(([creations, deletions]) => resolve({ creations, deletions }))
+              .catch(reject);
+        }),
+        clearUserReports: (userNik) => dbAction('reports', 'readwrite', (store, resolve) => {
+            const index = store.index('user_nik');
+            const request = index.openCursor(IDBKeyRange.only(userNik));
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+        }),
+        saveBackgroundRitase: (ritaseData) => dbAction('backgroundRitase', 'readwrite', (store, resolve) => store.add(ritaseData).onsuccess = resolve),
+        getBackgroundRitase: () => dbAction('backgroundRitase', 'readonly', (store, resolve) => store.getAll().onsuccess = e => resolve(e.target.result)),
+        clearBackgroundRitase: () => dbAction('backgroundRitase', 'readwrite', (store, resolve) => store.clear().onsuccess = resolve)
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // --- Logika Instal PWA ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.classList.add('hidden');
+            }
+        });
+
+        // --- Registrasi Service Worker (Optimized for Koyeb Free) ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Gunakan path relatif untuk menghindari issue CORS
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => {
+                        console.log('Service Worker terdaftar untuk Koyeb Free.', reg);
+                    })
+                    .catch(err => {
+                        console.log('Registrasi Service Worker gagal, menggunakan fallback:', err);
+                        // Fallback: tetap jalankan aplikasi tanpa background sync
+                    });
+            });
+        }
+
+        if (!_supabase) {
+            document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
+            return;
+        };
+
+        await initDB();
+
+        // --- SELEKTOR ELEMEN ---
+        const el = (selector) => document.querySelector(selector);
+        // ... [semua selektor elemen yang sebelumnya] ...
+
+        // --- STATE APLIKASI ---
+        let allReports = [];
+        let clockInterval;
+        let confirmCallback = null;
+        let currentUser = null;
+        const SESSION_KEY = 'activeWorkSession';
+        const USER_KEY = 'currentUserProfile';
+        
+        // --- GPS Auto-Ritase Variables ---
+        const GEOLOCATION_OPTIONS = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+        
+        let geofenceWatchId = null;
+        let currentGeofence = null;
+        let lastGeofenceState = null;
+        let geofenceTriggerCount = 0;
+        let isMonitoringGeofence = false;
+        let currentPosition = null;
+        let lastTriggerTime = 0;
+        const TRIGGER_COOLDOWN = 30000; // 30 detik cooldown antara trigger
+        const GEOFENCE_RADIUS = 50; // 50 meter radius
+
+        // --- Background Geofencing Functions (Optimized for Koyeb Free) ---
+
+        // Memeriksa dukungan Geofencing API
+        async function checkGeofencingSupport() {
+            // Di Koyeb Free, kita perlu mengecek dengan hati-hati
+            if (!('geofencing' in navigator)) {
+                console.warn('Geofencing API tidak didukung di browser ini');
+                return false;
+            }
+            
+            // Periksa izin notifikasi
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.warn('Izin notifikasi tidak diberikan');
+                }
+                return true;
+            } catch (error) {
+                console.warn('Tidak dapat memeriksa izin notifikasi:', error);
+                return false;
+            }
+        }
+
+        // Mendaftarkan geofence ke service worker
+        async function registerBackgroundGeofence(geofence) {
+            try {
+                // Pastikan service worker sudah terdaftar
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Kirim geofence ke service worker
+                registration.active.postMessage({
+                    type: 'REGISTER_GEOFENCE',
+                    geofence: geofence
+                });
+                
+                console.log('Geofence berhasil didaftarkan untuk pemantauan latar belakang');
+                return true;
+            } catch (error) {
+                console.error('Gagal mendaftarkan geofence latar belakang:', error);
+                // Fallback: simpan di localStorage untuk foreground monitoring
+                localStorage.setItem('fallbackGeofence', JSON.stringify(geofence));
+                return false;
+            }
+        }
+
+        // Menghapus pendaftaran geofence
+        async function unregisterBackgroundGeofence() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                registration.active.postMessage({
+                    type: 'UNREGISTER_GEOFENCE'
+                });
+                console.log('Geofence berhasil dihapus dari pemantauan latar belakang');
+            } catch (error) {
+                console.error('Gagal menghapus pendaftaran geofence:', error);
+            }
+            
+            // Hapus fallback geofence
+            localStorage.removeItem('fallbackGeofence');
+        }
+
+        // Mendengarkan pesan dari service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'GEOFENCE_LEAVE') {
+                    handleBackgroundGeofenceLeave(event.data);
+                } else if (event.data.type === 'GEOFENCE_ENTER') {
+                    handleBackgroundGeofenceEnter(event.data);
+                }
+            });
+        }
+
+        // Menangani event keluar area dari latar belakang
+        function handleBackgroundGeofenceLeave(data) {
+            if (getActiveSession()) {
+                geofenceTriggerCount++;
+                geofenceTriggerCountEl.textContent = geofenceTriggerCount;
+                recordRitase();
+                updateRitaseSummary(getActiveSession().ritase, getActiveSession().tanggal, getActiveSession().shift);
+                
+                // Tampilkan notifikasi
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Auto-Ritase', {
+                        body: 'Ritase tercatat otomatis saat meninggalkan area muatan.',
+                        icon: './icon-192x192.png',
+                        tag: 'ritase-notification'
+                    });
+                }
+            }
+            
+            saveBackgroundRitase({
+                timestamp: data.timestamp,
+                type: 'background_ritase_leave'
+            });
+        }
+
+        // Menangani event masuk area dari latar belakang
+        function handleBackgroundGeofenceEnter(data) {
+            if (getActiveSession()) {
+                geofenceStatusIcon.classList.replace('geofence-inactive', 'geofence-active');
+                geofenceStatusText.textContent = 'Di Area Muatan';
+                gpsRitaseCard.classList.add('gps-active');
+            }
+            
+            saveBackgroundRitase({
+                timestamp: data.timestamp,
+                type: 'background_ritase_enter'
+            });
+        }
+
+        // Menyimpan ritase latar belakang
+        async function saveBackgroundRitase(ritaseData) {
+            try {
+                await localDb.saveBackgroundRitase(ritaseData);
+            } catch (error) {
+                console.error('Gagal menyimpan ritase latar belakang:', error);
+            }
+        }
+
+        // --- LOGIKA TEMA ---
+        const applyTheme = (theme) => {
+            document.documentElement.classList.toggle('dark', theme === 'dark');
+            themeIconSun.classList.toggle('hidden', theme === 'dark');
+            themeIconMoon.classList.toggle('hidden', theme !== 'dark');
+            localStorage.setItem('theme', theme);
+        };
+        themeToggle.addEventListener('click', () => applyTheme(localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'));
+        applyTheme(localStorage.getItem('theme') || 'light');
+
+        // --- FUNGSI UTILITAS ---
+        const showMessage = (title, text, isError = false) => {
+            messageModalTitle.textContent = title;
+            messageModalText.textContent = text;
+            el('#message-modal-icon').innerHTML = isError 
+                ? `<i class="fas fa-times-circle text-6xl text-rose-500"></i>` 
+                : `<i class="fas fa-check-circle text-6xl text-teal-500"></i>`;
+            messageModal.classList.replace('hidden', 'flex');
+        };
+
+        const sanitizeHTML = (str) => {
+            if (!str) return '';
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        };
+        
+        const formatDate = (dateString, long = false) => {
+            const date = new Date(dateString);
+            const options = long 
+                ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }
+                : { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' };
+            return date.toLocaleDateString('id-ID', options);
+        };
+        
+        const formatCurrency = (number) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        };
+
+        // --- MANAJEMEN TAMPILAN ---
+        function showView(view) {
+            formContainer.classList.add('hidden');
+            dashboardContainer.classList.add('hidden');
+            if (view === 'form') {
+                formContainer.classList.remove('hidden');
+            } else {
+                dashboardContainer.classList.remove('hidden');
+            }
+        }
+        
+        // --- GPS Auto-Ritase Functions ---
+        
+        // Calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            
+            return R * c;
+        }
+        
+        // Check if current position is within geofence
+        function checkGeofence(position, geofence) {
+            if (!geofence) return false;
+            
+            const distance = calculateDistance(
+                position.coords.latitude, 
+                position.coords.longitude,
+                geofence.latitude,
+                geofence.longitude
+            );
+            
+            return distance <= geofence.radius;
+        }
+        
+        // Handle geofence enter/exit events
+        function handleGeofenceChange(isInside, distance) {
+            if (lastGeofenceState === isInside) return;
+        
+            const previouslyInside = lastGeofenceState === true;
+            lastGeofenceState = isInside;
+        
+            if (isInside) {
+                geofenceStatusIcon.classList.replace('geofence-inactive', 'geofence-active');
+                geofenceStatusText.textContent = 'Di Area Muatan';
+                gpsRitaseCard.classList.add('gps-active');
+                gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Dalam Area`;
+            } else {
+                geofenceStatusIcon.classList.replace('geofence-active', 'geofence-inactive');
+                geofenceStatusText.textContent = 'Di Luar Area';
+                gpsRitaseCard.classList.remove('gps-active');
+                gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Luar Area`;
+        
+                const currentTime = Date.now();
+                if (previouslyInside && (currentTime - lastTriggerTime) > TRIGGER_COOLDOWN) {
+                    geofenceTriggerCount++;
+                    geofenceTriggerCountEl.textContent = geofenceTriggerCount;
+                    recordRitase();
+                    lastTriggerTime = currentTime;
+                    showMessage('Auto-Ritase', 'Ritase tercatat otomatis saat meninggalkan area muatan.');
+                }
+            }
+        }
+        
+        // Start monitoring geofence
+        function startGeofenceMonitoring() {
+            if (!currentGeofence) {
+                // Coba muat dari fallback storage
+                const fallbackGeofence = localStorage.getItem('fallbackGeofence');
+                if (fallbackGeofence) {
+                    currentGeofence = JSON.parse(fallbackGeofence);
+                    geofenceCoords.classList.remove('hidden');
+                    geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
+                    geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
+                } else {
+                    showMessage('GPS Error', 'Area muatan belum disetup. Silakan setup area terlebih dahulu.', true);
+                    return false;
+                }
+            }
+            
+            if (geofenceWatchId !== null) {
+                return true;
+            }
+            
+            if (!navigator.geolocation) {
+                showMessage('GPS Tidak Support', 'Browser Anda tidak mendukung geolocation.', true);
+                return false;
+            }
+            
+            gpsStatusIndicator.classList.remove('gps-status-off', 'gps-status-on');
+            gpsStatusIndicator.classList.add('gps-status-acquiring');
+            gpsDebugInfo.textContent = 'Mencari sinyal GPS...';
+            
+            geofenceWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    currentPosition = position;
+                    const accuracy = position.coords.accuracy;
+                    gpsAccuracy.textContent = `${accuracy.toFixed(1)} m`;
+                    
+                    gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-off');
+                    gpsStatusIndicator.classList.add('gps-status-on');
+                    
+                    const distance = calculateDistance(
+                        position.coords.latitude, 
+                        position.coords.longitude,
+                        currentGeofence.latitude,
+                        currentGeofence.longitude
+                    );
+                    
+                    const isInside = distance <= currentGeofence.radius;
+                    handleGeofenceChange(isInside, distance);
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    let errorMsg = 'Error mendapatkan lokasi: ';
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += 'Izin geolocation ditolak';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += 'Posisi tidak available';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += 'Timeout mendapatkan posisi';
+                            break;
+                        default:
+                            errorMsg += 'Error tidak diketahui';
+                    }
+                    
+                    gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-on');
+                    gpsStatusIndicator.classList.add('gps-status-off');
+                    gpsDebugInfo.textContent = 'Error: ' + errorMsg;
+                    
+                    showMessage('GPS Error', errorMsg, true);
+                    stopGeofenceMonitoring();
+                },
+                GEOLOCATION_OPTIONS
+            );
+            
+            isMonitoringGeofence = true;
+            toggleGpsBtn.innerHTML = '<i class="fas fa-stop mr-1"></i>Berhenti';
+            toggleGpsBtn.classList.replace('btn-gray', 'btn-danger');
+            
+            return true;
+        }
+        
+        // Stop monitoring geofence
+        function stopGeofenceMonitoring() {
+            if (geofenceWatchId !== null) {
+                navigator.geolocation.clearWatch(geofenceWatchId);
+                geofenceWatchId = null;
+            }
+            
+            unregisterBackgroundGeofence();
+            
+            isMonitoringGeofence = false;
+            toggleGpsBtn.innerHTML = '<i class="fas fa-play mr-1"></i>Mulai';
+            toggleGpsBtn.classList.replace('btn-danger', 'btn-gray');
+            
+            geofenceStatusIcon.classList.remove('geofence-active');
+            geofenceStatusIcon.classList.add('geofence-inactive');
+            geofenceStatusText.textContent = 'Tidak Aktif';
+            gpsAccuracy.textContent = '-';
+            gpsRitaseCard.classList.remove('gps-active');
+            gpsDebugInfo.textContent = 'Jarak: - | Status: Menunggu';
+            
+            gpsStatusIndicator.classList.remove('gps-status-acquiring', 'gps-status-on');
+            gpsStatusIndicator.classList.add('gps-status-off');
+        }
+        
+        // Setup new geofence area
+        function setupGeofenceArea() {
+            if (!navigator.geolocation) {
+                showMessage('GPS Tidak Support', 'Browser Anda tidak mendukung geolocation.', true);
+                return;
+            }
+            
+            geofenceSetupModal.classList.replace('hidden', 'flex');
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const accuracy = position.coords.accuracy;
+                    setupAccuracy.textContent = `${accuracy.toFixed(1)} m`;
+                    
+                    if (accuracy > 50) {
+                        showMessage('Akurasi Rendah', 'Akurasi GPS sedang rendah. Pastikan sinyal GPS baik untuk hasil terbaik.', true);
+                    }
+                    
+                    currentGeofence = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        radius: GEOFENCE_RADIUS,
+                        accuracy: accuracy,
+                        timestamp: new Date().toISOString()
+                    };
+                },
+                (error) => {
+                    console.error('Error getting location for geofence setup:', error);
+                    showMessage('Error', 'Gagal mendapatkan lokasi untuk setup area.', true);
+                    geofenceSetupModal.classList.replace('flex', 'hidden');
+                },
+                GEOLOCATION_OPTIONS
+            );
+        }
+        
+        // Save geofence area
+        async function saveGeofenceArea() {
+            if (!currentGeofence) {
+                showMessage('Error', 'Tidak ada data lokasi yang valid.', true);
+                return;
+            }
+            
+            localStorage.setItem('geofenceArea', JSON.stringify(currentGeofence));
+            
+            geofenceCoords.classList.remove('hidden');
+            geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
+            geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
+            
+            const backgroundRegistered = await registerBackgroundGeofence(currentGeofence);
+            
+            if (backgroundRegistered) {
+                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang diaktifkan.');
+            } else {
+                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang tidak didukung.');
+            }
+            
+            geofenceSetupModal.classList.replace('flex', 'hidden');
+            
+            const session = getActiveSession();
+            if (session) {
+                startGeofenceMonitoring();
+            }
+        }
+        
+        // Load saved geofence from localStorage
+        function loadGeofence() {
+            const savedGeofence = localStorage.getItem('geofenceArea');
+            if (savedGeofence) {
+                currentGeofence = JSON.parse(savedGeofence);
+                geofenceCoords.classList.remove('hidden');
+                geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
+                geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
+                
+                registerBackgroundGeofence(currentGeofence);
+            }
+        }
+
+        // --- LOGIKA SINKRONISASI & DATA ---
+        async function syncToServer() {
+            if (!navigator.onLine || !_supabase || !currentUser) { return; }
+            console.log("Memulai sinkronisasi...");
+            const { creations, deletions } = await localDb.getPending(currentUser.nik);
+            
+            if (deletions.length > 0) {
+                const { error } = await _supabase.from('reports').delete().in('id', deletions.map(r => r.id));
+                if (!error) {
+                    for (const report of deletions) await localDb.deleteReport(report.id);
+                } else {
+                    console.error("Gagal menghapus laporan di server:", error);
+                }
+            }
+            
+            if (creations.length > 0) {
+                const reportsToCreate = creations.map(r => { 
+                    const { status, ...d } = r; 
+                    if (d.fuel_logs && typeof d.fuel_logs !== 'string') {
+                        d.fuel_logs = JSON.stringify(d.fuel_logs);
+                    }
+                    if (d.ritase && typeof d.ritase !== 'string') {
+                        d.ritase = JSON.stringify(d.ritase);
+                    }
+                    return d; 
+                });
+                const { error } = await _supabase.from('reports').upsert(reportsToCreate, { onConflict: 'id' });
+                if (!error) {
+                    for (const report of creations) {
+                        report.status = 'synced';
+                        await localDb.saveReport(report);
+                    }
+                } else {
+                     console.error("Gagal membuat/memperbarui laporan di server:", error);
+                }
+            }
+            
+            await syncBackgroundRitase();
+            await fetchFromServer();
+            await updateDashboardView();
+            console.log("Sinkronisasi selesai.");
+        }
+
+        // Sinkronkan ritase latar belakang
+        async function syncBackgroundRitase() {
+            try {
+                const backgroundRitase = await localDb.getBackgroundRitase();
+                if (backgroundRitase.length > 0) {
+                    console.log(`Menyinkronkan ${backgroundRitase.length} ritase latar belakang`);
+                    
+                    const session = getActiveSession();
+                    if (session) {
+                        for (const ritase of backgroundRitase) {
+                            if (ritase.type === 'background_ritase_leave') {
+                                const ritaseDate = new Date(ritase.timestamp);
+                                const hourKey = ritaseDate.getHours().toString().padStart(2, '0') + ':00';
+                                const minutes = ritaseDate.getMinutes();
+                                
+                                if (session.ritase.hasOwnProperty(hourKey)) {
+                                    session.ritase[hourKey].push(minutes);
+                                }
+                            }
+                        }
+                        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+                        
+                        if (formContainer.classList.contains('hidden') === false) {
+                            renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
+                            updateRitaseSummary(session.ritase, session.tanggal, session.shift);
+                        }
+                    }
+                    
+                    await localDb.clearBackgroundRitase();
+                }
+            } catch (error) {
+                console.error('Gagal menyinkronkan ritase latar belakang:', error);
+            }
+        }
+
+        async function fetchFromServer() {
+            if (!navigator.onLine || !_supabase || !currentUser) { return; }
+            const { data: serverReports, error } = await _supabase.from('reports').select('*').eq('user_nik', currentUser.nik);
+            if (error) { 
+                console.error("Gagal mengambil data dari server:", error);
+                return;
+            }
+            
+            for(const serverReport of serverReports) {
+                serverReport.status = 'synced';
+                if (serverReport.ritase && typeof serverReport.ritase === 'string') {
+                    try { serverReport.ritase = JSON.parse(serverReport.ritase); } catch(e) { serverReport.ritase = {}; }
+                }
+                 if (serverReport.fuel_logs && typeof serverReport.fuel_logs === 'string') {
+                    try { serverReport.fuel_logs = JSON.parse(serverReport.fuel_logs); } catch(e) { serverReport.fuel_logs = []; }
+                }
+                await localDb.saveReport(serverReport);
+            }
+        }
+
+        // --- LOGIKA AUTENTIKASI DENGAN NIK ---
+        
+        function checkLoginState() {
+            const userJSON = localStorage.getItem(USER_KEY);
+            if (userJSON) {
+                currentUser = JSON.parse(userJSON);
+                initializeAppUI();
+            } else {
+                authPage.classList.remove('hidden');
+                appPage.classList.add('hidden');
+            }
+        }
+
+        async function initializeAppUI() {
+            authPage.classList.add('hidden');
+            appPage.classList.remove('hidden');
+            userNameEl.innerHTML = sanitizeHTML(currentUser.full_name);
+            userNikEl.innerHTML = `NIK: ${sanitizeHTML(currentUser.nik)}`;
+            
+            await syncToServer();
+            showView('dashboard');
+            await updateDashboardView();
+            
+            loadGeofence();
+            
+            if ('Notification' in window) {
+                Notification.requestPermission();
+            }
+        }
+
+        // ... [KODE LAINNYA TIDAK BERUBAH] ...
+        // ... semua fungsi dan event listener yang sebelumnya ...
+
+        // --- GPS Auto-Ritase Event Listeners ---
+        setupGeofenceBtn.addEventListener('click', setupGeofenceArea);
+        
+        toggleGpsBtn.addEventListener('click', () => {
+            if (isMonitoringGeofence) {
+                stopGeofenceMonitoring();
+            } else {
+                startGeofenceMonitoring();
+            }
+        });
+        
+        cancelSetupBtn.addEventListener('click', () => {
+            geofenceSetupModal.classList.replace('flex', 'hidden');
+        });
+        
+        saveGeofenceBtn.addEventListener('click', saveGeofenceArea);
+        
+        loadGeofence();
+        
+        checkLoginState();
+    });
+    </script>
+</body>
+</html>
