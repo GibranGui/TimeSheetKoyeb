@@ -200,40 +200,6 @@
                 bottom: 5rem;
             }
         }
-
-        /* Error Message Styling */
-        .error-message {
-            background-color: #fee2e2;
-            color: #b91c1c;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .error-message i {
-            font-size: 1.25rem;
-        }
-        
-        .config-help {
-            background-color: #dbeafe;
-            color: #1e40af;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            font-size: 0.875rem;
-        }
-        
-        .config-help ol {
-            padding-left: 1.5rem;
-            margin-top: 0.5rem;
-        }
-        
-        .config-help li {
-            margin-bottom: 0.5rem;
-        }
     </style>
 </head>
 <body>
@@ -571,7 +537,7 @@
     <script>
     // --- Inisialisasi Supabase & Variabel Global ---
     const SUPABASE_URL = 'https://hwajcditsdmebqmflqsm.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
 
     // --- Konstanta Gaji ---
     const GAJI_POKOK = 3703206;
@@ -583,13 +549,8 @@
 
     let _supabase;
     if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('URL_ANDA')) {
-        try {
-            const { createClient } = supabase;
-            _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log("Supabase client berhasil diinisialisasi");
-        } catch (error) {
-            console.error("Gagal menginisialisasi Supabase client:", error);
-        }
+        const { createClient } = supabase;
+        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     // --- Logika Database IndexedDB ---
@@ -772,38 +733,10 @@
             await initDB();
             loadingText.textContent = 'Memuat data...';
             
-            // Periksa konfigurasi Supabase
             if (!_supabase) {
-                const errorHtml = `
-                    <div class="glass-card p-6">
-                        <h2 class="text-xl font-bold text-red-600 mb-4 flex items-center">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            Konfigurasi Supabase Diperlukan
-                        </h2>
-                        <p class="mb-4">Terjadi kesalahan dalam konfigurasi Supabase. Pastikan:</p>
-                        <div class="config-help">
-                            <ol>
-                                <li>URL dan kunci API Supabase sudah benar</li>
-                                <li>Tabel 'profiles' sudah dibuat di database Supabase</li>
-                                <li>Kebijakan RLS (Row Level Security) sudah dikonfigurasi dengan benar</li>
-                            </ol>
-                        </div>
-                        <div class="error-message mt-4">
-                            <i class="fas fa-bug"></i>
-                            <span>Gagal menginisialisasi Supabase client</span>
-                        </div>
-                        <button id="retry-init-btn" class="btn btn-primary mt-4">
-                            <i class="fas fa-redo mr-2"></i>Coba Lagi
-                        </button>
-                    </div>
-                `;
-                
-                document.body.innerHTML = errorHtml;
-                document.getElementById('retry-init-btn').addEventListener('click', () => {
-                    window.location.reload();
-                });
+                document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
                 return;
-            }
+            };
 
             // Sembunyikan loading overlay
             setTimeout(() => {
@@ -1477,23 +1410,18 @@
                 return;
             }
 
-            try {
-                const { data, error } = await _supabase
-                    .from('profiles')
-                    .select('nik, full_name')
-                    .eq('nik', nik)
-                    .single();
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('nik, full_name')
+                .eq('nik', nik)
+                .single();
 
-                if (error || !data) {
-                    showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
-                } else {
-                    currentUser = data;
-                    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-                    initializeAppUI();
-                }
-            } catch (error) {
-                console.error('Error saat login:', error);
-                showMessage('Login Gagal', 'Terjadi kesalahan saat menghubungi server. Pastikan koneksi internet Anda stabil.', true);
+            if (error || !data) {
+                showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
+            } else {
+                currentUser = data;
+                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                initializeAppUI();
             }
         });
 
@@ -1507,32 +1435,27 @@
                 return;
             }
 
-            try {
-                const { data: existingUser, error: checkError } = await _supabase
-                    .from('profiles')
-                    .select('nik')
-                    .eq('nik', nik)
-                    .single();
+            const { data: existingUser, error: checkError } = await _supabase
+                .from('profiles')
+                .select('nik')
+                .eq('nik', nik)
+                .single();
 
-                if (existingUser) {
-                    showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
-                    return;
-                }
+            if (existingUser) {
+                showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
+                return;
+            }
 
-                const { error } = await _supabase.from('profiles').insert([
-                    { nik: nik, full_name: fullName }
-                ]);
-                
-                if (error) {
-                    showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
-                } else {
-                    showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
-                    registerForm.reset();
-                    showLoginLink.click();
-                }
-            } catch (error) {
-                console.error('Error saat registrasi:', error);
-                showMessage('Pendaftaran Gagal', 'Terjadi kesalahan saat menghubungi server. Pastikan koneksi internet Anda stabil.', true);
+            const { error } = await _supabase.from('profiles').insert([
+                { nik: nik, full_name: fullName }
+            ]);
+            
+            if (error) {
+                showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
+            } else {
+                showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
+                registerForm.reset();
+                showLoginLink.click();
             }
         });
 
@@ -2356,6 +2279,7 @@
         
         saveGeofenceBtn.addEventListener('click', saveGeofenceArea);
         
+        // Load saved geofence on startup
         loadGeofence();
         
         checkLoginState();
