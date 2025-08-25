@@ -189,7 +189,7 @@ async function handleGeofenceEvent(type, event) {
       // Tampilkan notifikasi
       self.registration.showNotification('Auto-Ritase', {
         body: 'Ritase tercatat otomatis saat meninggalkan area muatan.',
-        icon: './icon-192x192.png',
+        icon: './icon.png',
         tag: 'ritase-notification',
         requireInteraction: true
       });
