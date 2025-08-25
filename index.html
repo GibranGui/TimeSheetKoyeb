@@ -1404,6 +1404,865 @@
 
         // ... [KODE LAINNYA TIDAK BERUBAH] ...
         // ... semua fungsi dan event listener yang sebelumnya ...
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nik = el('#login-nik').value.toUpperCase();
+            if (!nik) {
+                showMessage('Login Gagal', 'NIK tidak boleh kosong.', true);
+                return;
+            }
+
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('nik, full_name')
+                .eq('nik', nik)
+                .single();
+
+            if (error || !data) {
+                showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
+            } else {
+                currentUser = data;
+                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                initializeAppUI();
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = el('#register-name').value;
+            const nik = el('#register-nik').value.toUpperCase();
+
+            if (!fullName || !nik) {
+                showMessage('Pendaftaran Gagal', 'Nama dan NIK tidak boleh kosong.', true);
+                return;
+            }
+
+            const { data: existingUser, error: checkError } = await _supabase
+                .from('profiles')
+                .select('nik')
+                .eq('nik', nik)
+                .single();
+
+            if (existingUser) {
+                showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
+                return;
+            }
+
+            const { error } = await _supabase.from('profiles').insert([
+                { nik: nik, full_name: fullName }
+            ]);
+            
+            if (error) {
+                showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
+            } else {
+                showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
+                registerForm.reset();
+                showLoginLink.click();
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            currentUser = null;
+            localStorage.removeItem(USER_KEY);
+            localStorage.removeItem(SESSION_KEY);
+            window.location.reload();
+        });
+
+        showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); });
+        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+        
+        // --- LOGIKA INTI APLIKASI ---
+        
+        async function updateDashboardView() {
+            if (!currentUser) {
+                dashboardContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            };
+
+            renderActiveSessionCard();
+
+            allReports = await localDb.getReports(currentUser.nik) || [];
+            allReports = allReports.filter(r => r.status !== 'pending_deletion');
+            allReports.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+            
+            const hasAnyReport = allReports.length > 0;
+            emptyState.classList.toggle('hidden', hasAnyReport || getActiveSession());
+
+            if (hasAnyReport) {
+                populateMainMonthFilter();
+                const selectedMonth = mainMonthFilter.value || (allReports[0] ? allReports[0].tanggal.substring(0, 7) : '');
+                if (mainMonthFilter.value !== selectedMonth) mainMonthFilter.value = selectedMonth;
+                const filtered = allReports.filter(r => r.tanggal.startsWith(selectedMonth));
+                renderFilteredReports(filtered);
+            } else {
+                renderFilteredReports([]);
+            }
+        }
+        
+        function renderActiveSessionCard() {
+            activeSessionContainer.innerHTML = '';
+            const session = getActiveSession();
+            if (session) {
+                const ritaseCount = Object.values(session.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
+                const cardHTML = `
+                <div class="glass-card p-5 cursor-pointer bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-lg border-purple-400" data-action="resume-session">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold flex items-center gap-3">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Sesi Aktif
+                        </h3>
+                        <span class="font-bold text-sm bg-white/20 px-3 py-1 rounded-full">LANJUTKAN</span>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/20 text-sm grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div><strong>Unit:</strong> ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)}</div>
+                        <div><strong>Shift:</strong> ${sanitizeHTML(session.shift)}</div>
+                        <div><strong>Muatan:</strong> ${sanitizeHTML(session.jenisMuatan)}</div>
+                        <div><strong>Ritase Dicatat:</strong> ${ritaseCount}</div>
+                    </div>
+                </div>
+                `;
+                activeSessionContainer.innerHTML = cardHTML;
+            }
+        }
+
+        activeSessionContainer.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="resume-session"]')) {
+                const session = getActiveSession();
+                if (session) {
+                    resumeSession(session);
+                }
+            }
+        });
+
+        function resumeSession(session) {
+            showView('form');
+            step1Div.classList.add('hidden');
+            step2Div.classList.remove('hidden');
+            
+            step1Summary.innerHTML = `
+                Unit ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)} (${formatDate(session.tanggal, true)}) <br> 
+                <span class="font-semibold">HM Awal:</span> ${sanitizeHTML(session.hmAwal)} | <span class="font-semibold">KM Awal:</span> ${sanitizeHTML(session.kmAwal)}
+            `;
+            
+            renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
+            updateRitaseSummary(session.ritase, session.tanggal, session.shift);
+            renderFuelLogHistory(session.fuel_logs || []);
+
+            updateClock();
+            if (clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(updateClock, 1000);
+
+            hmAkhirInput.min = parseFloat(session.hmAwal) + 0.01;
+            kmAkhirInput.min = parseFloat(session.kmAwal) + 0.01;
+            
+            // Start GPS monitoring if geofence is set
+            if (currentGeofence) {
+                startGeofenceMonitoring();
+            }
+        }
+
+        timesheetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const session = getActiveSession();
+            if (!session) {
+                showMessage('Sesi Tidak Ditemukan', 'Tidak ada sesi aktif untuk diselesaikan.', true);
+                return;
+            }
+
+            const hmAkhir = parseFloat(hmAkhirInput.value);
+            const kmAkhir = parseFloat(kmAkhirInput.value);
+            const hmAwal = parseFloat(session.hmAwal);
+
+            if (isNaN(hmAkhir) || isNaN(kmAkhir) || hmAkhir <= hmAwal) { 
+                showMessage('Data Tidak Valid', 'HM Akhir dan KM Akhir harus angka valid. HM Akhir harus lebih besar dari HM Awal.', true); return; 
+            }
+            
+            let newReport = {
+                id: crypto.randomUUID(),
+                user_nik: currentUser.nik,
+                nama_operator: currentUser.full_name,
+                tanggal: session.tanggal, 
+                shift: session.shift, 
+                jenis_muatan: session.jenisMuatan,
+                unit_type: session.unitType,
+                unit_id: session.unitId,
+                hm_awal_start: session.hmAwal,
+                km_awal_start: session.kmAwal,
+                note: sanitizeHTML(el('#note').value),
+                ritase: session.ritase,
+                fuel_logs: session.fuel_logs || [],
+                status: 'pending_creation',
+                hm_akhir: hmAkhir,
+                km_akhir: kmAkhir,
+                jam_kerja: hmAkhir - hmAwal
+            };
+            
+            await localDb.saveReport(newReport);
+            localStorage.removeItem(SESSION_KEY);
+            
+            // Stop GPS monitoring
+            stopGeofenceMonitoring();
+            
+            await updateDashboardView(); 
+            resetForm();
+            showView('dashboard');
+            showMessage('Sukses', 'Laporan kerja berhasil disimpan.');
+            await syncToServer();
+        });
+
+        reportListContainer.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-btn');
+            const reportCard = e.target.closest('.report-card');
+            
+            if (deleteBtn) {
+                e.stopPropagation();
+                const reportId = deleteBtn.dataset.id;
+                showConfirm('Konfirmasi Hapus', 'Apakah Anda yakin ingin menghapus laporan ini?', async () => {
+                    const report = allReports.find(r => r.id === reportId);
+                    if (report) {
+                        if(report.status === 'pending_creation'){
+                             await localDb.deleteReport(reportId);
+                        } else {
+                            report.status = 'pending_deletion';
+                            await localDb.saveReport(report);
+                        }
+                        await updateDashboardView();
+                        showMessage('Laporan Dihapus', 'Laporan telah ditandai untuk dihapus.');
+                        await syncToServer();
+                    }
+                });
+            } else if (reportCard) {
+                const reportId = reportCard.dataset.reportId;
+                const report = allReports.find(r => r.id === reportId);
+                if (report) { showReportDetail(report); }
+            }
+        });
+
+        window.addEventListener('online', syncToServer);
+        
+        function renderFilteredReports(filteredReports) {
+            reportListContainer.innerHTML = '';
+            const hasFilteredReports = filteredReports.length > 0;
+            noDataForMonth.classList.toggle('hidden', !hasFilteredReports);
+            totalCard.classList.toggle('hidden', !hasFilteredReports);
+            exportSection.classList.toggle('hidden', !hasFilteredReports);
+            
+            if (hasFilteredReports) {
+                filteredReports.forEach(report => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card p-5 fade-in cursor-pointer report-card relative';
+                    card.dataset.reportId = report.id;
+                    const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
+                    const muatanTagColor = report.jenis_muatan === 'COAL' ? 'bg-slate-800 text-white' : 'bg-amber-400 text-amber-900';
+                    const syncStatusIcon = report.status === 'pending_creation'
+                        ? `<i class="fas fa-cloud-upload-alt text-yellow-500 absolute top-4 left-4" title="Menunggu sinkronisasi"></i>`
+                        : '';
+                    
+                    card.innerHTML = `
+                        ${syncStatusIcon}
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold text-lg">${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">${formatDate(report.tanggal, true)}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-4">
+                                <span class="text-xs font-bold px-3 py-1 rounded-full ${muatanTagColor}">${sanitizeHTML(report.jenis_muatan)}</span>
+                                <p class="text-xs text-slate-400 mt-1">${sanitizeHTML(report.shift)}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-black/5 dark:border-white/5 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div>
+                                <p class="text-xs text-slate-500">Jam Efektif</p>
+                                <p class="font-black text-teal-500 text-2xl">${(report.jam_kerja || 0).toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500">Total Ritase</p>
+                                <p class="font-black text-indigo-500 text-2xl">${ritaseCount}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500">HM (Awal-Akhir)</p>
+                                <p class="font-bold text-sm">${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500">KM (Awal-Akhir)</p>
+                                <p class="font-bold text-sm">${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}</p>
+                            </div>
+                        </div>
+                        <button data-id="${report.id}" class="delete-btn absolute -top-1 -right-1 text-slate-400 hover:text-rose-500 h-8 w-8 rounded-full bg-white dark:bg-slate-800 shadow-md hover:bg-rose-500/10 transition-colors flex items-center justify-center">
+                            <i class="fas fa-trash-alt fa-sm"></i>
+                        </button>
+                    `;
+                    reportListContainer.appendChild(card);
+                });
+            }
+            const monthlyTotal = filteredReports.reduce((total, r) => total + (r.jam_kerja || 0), 0);
+            grandTotalJamEl.textContent = monthlyTotal.toFixed(2);
+        }
+
+        function populateMainMonthFilter() {
+            const currentFilterValue = mainMonthFilter.value;
+            mainMonthFilter.innerHTML = '';
+            if (allReports.length === 0) return;
+
+            const availableMonths = [...new Set(allReports.map(r => r.tanggal.substring(0, 7)))];
+            
+            availableMonths.forEach(monthStr => {
+                const option = document.createElement('option');
+                const date = new Date(monthStr + '-02T00:00:00Z'); // Gunakan Z untuk UTC
+                option.value = monthStr;
+                option.textContent = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+                mainMonthFilter.appendChild(option);
+            });
+
+            if (availableMonths.includes(currentFilterValue)) {
+                mainMonthFilter.value = currentFilterValue;
+            } else if (availableMonths.length > 0) {
+                mainMonthFilter.value = availableMonths[0];
+            }
+        }
+        mainMonthFilter.addEventListener('change', () => { 
+            const selectedMonth = mainMonthFilter.value;
+            const filtered = allReports.filter(r => r.tanggal.startsWith(selectedMonth));
+            renderFilteredReports(filtered);
+        });
+
+        function resetForm() {
+            timesheetForm.reset();
+            const today = new Date();
+            today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+            tanggalInput.value = today.toISOString().slice(0, 10);
+            
+            shiftInput.value = "";
+            jenisMuatanInput.value = "";
+            
+            step2Div.classList.add('hidden');
+            step1Div.classList.remove('hidden');
+            if (clockInterval) clearInterval(clockInterval);
+            
+            // Stop GPS monitoring
+            stopGeofenceMonitoring();
+        }
+
+        function getActiveSession() {
+            const savedSessionJSON = localStorage.getItem(SESSION_KEY);
+            if (!savedSessionJSON) return null;
+            try {
+                return JSON.parse(savedSessionJSON);
+            } catch (e) {
+                localStorage.removeItem(SESSION_KEY);
+                return null;
+            }
+        }
+
+        startSessionBtn.addEventListener('click', () => {
+            if (!tanggalInput.value || !shiftInput.value || !jenisMuatanInput.value || !hmAwalStartInput.value || !kmAwalStartInput.value || !unitTypeStartInput.value || !unitIdStartInput.value) {
+                showMessage('Data Kurang', 'Silakan isi semua kolom untuk memulai sesi.', true);
+                return;
+            }
+
+            const sessionData = {
+                id: `session_${Date.now()}`,
+                status: 'active',
+                tanggal: tanggalInput.value,
+                shift: shiftInput.value,
+                jenisMuatan: jenisMuatanInput.value,
+                unitType: unitTypeStartInput.value.toUpperCase(),
+                unitId: unitIdStartInput.value.toUpperCase(),
+                hmAwal: hmAwalStartInput.value,
+                kmAwal: kmAwalStartInput.value,
+                ritase: createInitialRitaseData(shiftInput.value),
+                fuel_logs: [],
+            };
+            
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+            resumeSession(sessionData);
+        });
+
+        function createInitialRitaseData(shift) {
+            const initialData = {};
+            const startHour = (shift === 'Siang') ? 7 : 19;
+            for (let i = 0; i < 12; i++) {
+                let hour = startHour + i;
+                if (hour >= 24) hour -= 24;
+                const hourString = hour.toString().padStart(2, '0') + ':00';
+                initialData[hourString] = [];
+            }
+            return initialData;
+        }
+
+        function sortRitaseHours(shift) {
+            return (a, b) => {
+                let hourA = parseInt(a.split(':')[0]);
+                let hourB = parseInt(b.split(':')[0]);
+                if (shift === 'Malam') {
+                    if (hourA < 7) hourA += 24;
+                    if (hourB < 7) hourB += 24;
+                }
+                return hourA - hourB;
+            };
+        }
+
+        function renderRitaseTable(container, ritaseData, shift) {
+            container.innerHTML = '';
+            const hourKeys = Object.keys(ritaseData).sort(sortRitaseHours(shift));
+
+            hourKeys.forEach(hourKey => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/5 dark:hover:bg-white/5';
+                const ritaseEntries = ritaseData[hourKey] || [];
+                row.innerHTML = `
+                    <td class="p-3 font-medium">${hourKey}</td>
+                    <td class="p-3">${ritaseEntries.map(m => String(m).padStart(2, '0')).sort((a, b) => a - b).join(', ') || '<span class="text-slate-500">-</span>'}</td>
+                `;
+                container.appendChild(row);
+            });
+        }
+        function updateClock() {
+            const session = getActiveSession();
+            if (!session) return;
+            currentTimeEl.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const isWithinShift = checkIsWithinShift(session.shift);
+            recordRitaseBtn.disabled = !isWithinShift;
+            recordRitaseBtn.title = isWithinShift ? 'Catat waktu ritase saat ini' : 'Di luar jam shift yang dipilih';
+        }
+        function checkIsWithinShift(shift) {
+            const currentHour = new Date().getHours();
+            if (shift === 'Siang') {
+                return currentHour >= 7 && currentHour < 19;
+            } else if (shift === 'Malam') {
+                return currentHour >= 19 || currentHour < 7;
+            }
+            return false;
+        }
+        
+         function recordRitase() {
+            const session = getActiveSession();
+            if (!session) return;
+
+            const now = new Date();
+            const hourKey = now.getHours().toString().padStart(2, '0') + ':00';
+            const minutes = now.getMinutes();
+
+            if (session.ritase.hasOwnProperty(hourKey)) {
+                session.ritase[hourKey].push(minutes);
+                renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
+                updateRitaseSummary(session.ritase, session.tanggal, session.shift);
+                localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+            } else {
+                 showMessage("Di Luar Jam Kerja", `Jam ${hourKey} tidak termasuk dalam shift yang dipilih.`, true);
+            }
+        }
+
+        function updateRitaseSummary(ritaseData, sessionDate, sessionShift) {
+            const allRitase = [];
+            const baseDate = new Date(sessionDate + 'T00:00:00');
+
+            Object.entries(ritaseData).forEach(([hourKey, minutes]) => {
+                const hour = parseInt(hourKey.split(':')[0]);
+                minutes.forEach(minute => {
+                    let ritaseDate = new Date(baseDate);
+                    if (sessionShift === 'Malam' && hour < 7) {
+                        ritaseDate.setDate(ritaseDate.getDate() + 1);
+                    }
+                    ritaseDate.setHours(hour, minute, 0, 0);
+                    allRitase.push(ritaseDate);
+                });
+            });
+
+            allRitase.sort((a, b) => a - b);
+
+            totalRitaseSummary.textContent = allRitase.length;
+
+            if (allRitase.length > 1) {
+                let totalDiff = 0;
+                for (let i = 1; i < allRitase.length; i++) {
+                    totalDiff += (allRitase[i] - allRitase[i-1]);
+                }
+                const avgDiffSeconds = (totalDiff / (allRitase.length - 1)) / 1000;
+                const avgMinutes = Math.floor(avgDiffSeconds / 60);
+                const avgSeconds = Math.round(avgDiffSeconds % 60);
+                cycleTimeSummary.textContent = `${avgMinutes}m ${avgSeconds}s`;
+            } else {
+                cycleTimeSummary.textContent = '0m 0s';
+            }
+        }
+
+        saveFuelBtn.addEventListener('click', () => {
+            const session = getActiveSession();
+            if (!session) return;
+
+            const hm = parseFloat(hmFuelInput.value);
+            const liter = parseFloat(fuelLiterInput.value);
+
+            if (isNaN(hm) || isNaN(liter) || hm <= 0 || liter <= 0) {
+                showMessage('Data Fuel Tidak Valid', 'HM dan Liter harus angka positif.', true);
+                return;
+            }
+
+            if (!session.fuel_logs) {
+                session.fuel_logs = [];
+            }
+            session.fuel_logs.push({ hm, liter, timestamp: new Date().toISOString() });
+            localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+            
+            renderFuelLogHistory(session.fuel_logs);
+            hmFuelInput.value = '';
+            fuelLiterInput.value = '';
+            showMessage('Sukses', 'Catatan pengisian fuel berhasil disimpan.');
+        });
+
+        function renderFuelLogHistory(fuelLogs) {
+            fuelLogHistoryContainer.innerHTML = '';
+            if (!fuelLogs || fuelLogs.length === 0) return;
+
+            let historyHTML = '<h4 class="text-sm font-bold mt-4 mb-2">Riwayat Fuel:</h4><ul class="text-sm space-y-1">';
+            fuelLogs.forEach(log => {
+                historyHTML += `<li class="text-slate-600 dark:text-slate-300 p-2 rounded-md bg-slate-100 dark:bg-slate-700/50">- HM ${log.hm}: ${log.liter} Liter</li>`;
+            });
+            historyHTML += '</ul>';
+            fuelLogHistoryContainer.innerHTML = historyHTML;
+        }
+
+        cancelSessionBtn.addEventListener('click', () => {
+            showConfirm('Batalkan Sesi?', 'Semua data ritase dan fuel yang belum disimpan akan hilang. Anda yakin?', () => {
+                localStorage.removeItem(SESSION_KEY);
+                // Stop GPS monitoring
+                stopGeofenceMonitoring();
+                resetForm();
+                updateDashboardView();
+                showView('dashboard');
+            });
+        });
+
+        newSessionBtn.addEventListener('click', () => {
+            const session = getActiveSession();
+            if (session) {
+                showMessage('Sesi Masih Aktif', 'Selesaikan atau batalkan sesi yang sedang berjalan sebelum memulai sesi baru.', true);
+                return;
+            }
+            resetForm();
+            showView('form');
+        });
+
+        backToDashboardBtn.addEventListener('click', () => {
+            showView('dashboard');
+            updateDashboardView();
+        });
+
+        recordRitaseBtn.addEventListener('click', recordRitase);
+        
+        function showReportDetail(report) {
+            detailModalTitle.textContent = `Detail Laporan`;
+            let extraInfo = ` | Unit: ${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`;
+            if(report.hm_awal_start) {
+                extraInfo += `<br>HM: ${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)} | KM: ${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}`
+            }
+            detailModalInfo.innerHTML = `${formatDate(report.tanggal, true)}${extraInfo}`;
+            
+            let contentHTML = `
+                <div class="overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-white/10 shadow-inner">
+                    <h4 class="font-bold mb-2">Tabel Ritase</h4>
+                    <table class="w-full text-sm">
+                        <thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left w-1/4">Waktu</th><th class="p-2 font-semibold text-left">Ritase Tercatat (Menit)</th></tr></thead>
+                        <tbody id="detail-ritase-tbody"></tbody>
+                    </table>
+                </div>
+            `;
+
+            if (report.fuel_logs && report.fuel_logs.length > 0) {
+                contentHTML += `
+                <div class="mt-4 overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-white/10 shadow-inner">
+                    <h4 class="font-bold mb-2">Riwayat Pengisian Fuel</h4>
+                    <table class="w-full text-sm">
+                        <thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">HM</th><th class="p-2 font-semibold text-left">Liter</th></tr></thead>
+                        <tbody>
+                            ${report.fuel_logs.map(log => `<tr><td class="p-2">${log.hm}</td><td class="p-2">${log.liter} L</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                `;
+            }
+
+            detailModalContent.innerHTML = contentHTML;
+            renderRitaseTable(el('#detail-ritase-tbody'), report.ritase, report.shift);
+
+            detailModal.dataset.reportId = report.id;
+            detailModal.classList.replace('hidden', 'flex');
+        }
+        function showConfirm(title, text, callback) {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmCallback = callback;
+            confirmModal.classList.replace('hidden', 'flex');
+        }
+        messageModalCloseBtn.addEventListener('click', () => messageModal.classList.replace('flex', 'hidden'));
+        closeDetailModalBtn.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
+        closeDetailModalBtn2.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
+        confirmModalConfirmBtn.addEventListener('click', () => {
+            if (typeof confirmCallback === 'function') confirmCallback();
+            confirmModal.classList.replace('flex', 'hidden');
+            confirmCallback = null;
+        });
+        exportSinglePdfBtn.addEventListener('click', () => {
+             const reportId = detailModal.dataset.reportId;
+             const report = allReports.find(r => r.id === reportId);
+             if(report) exportSingleReportToPdf(report);
+        });
+        
+        function exportSingleReportToPdf(report) {
+             const { jsPDF } = window.jspdf; 
+             const doc = new jsPDF();
+             const pageW = doc.internal.pageSize.getWidth();
+             const margin = 14;
+             const primaryColor = '#0d9488';
+             const greyColor = '#475569';
+             let lastY = 0;
+             
+             // Header
+             doc.setFillColor(primaryColor);
+             doc.rect(0, 0, pageW, 30, 'F');
+             doc.setFont('helvetica', 'bold');
+             doc.setFontSize(18);
+             doc.setTextColor(255, 255, 255);
+             doc.text('LAPORAN KERJA HARIAN', pageW / 2, 18, { align: 'center' });
+             
+             // Info Utama
+             doc.setFontSize(11);
+             doc.setTextColor(greyColor);
+             doc.text(`Operator: ${sanitizeHTML(report.nama_operator.toUpperCase())}`, margin, 45);
+             doc.text(`Tanggal: ${formatDate(report.tanggal, true)}`, pageW - margin, 45, { align: 'right' });
+             lastY = 50;
+             
+             const infoBody = [
+                 [{content: 'Unit', styles: {fontStyle: 'bold'}}, `${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`],
+                 [{content: 'Shift', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.shift)],
+                 [{content: 'Muatan', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.jenis_muatan)],
+                 [{content: 'Jam Kerja', styles: {fontStyle: 'bold'}}, `${(report.jam_kerja || 0).toFixed(2)} Jam`],
+             ];
+             
+             doc.autoTable({
+                 startY: lastY,
+                 body: infoBody,
+                 theme: 'plain',
+                 styles: { fontSize: 10, cellPadding: 1.5 },
+                 columnStyles: { 0: { cellWidth: 35 } }
+             });
+             lastY = doc.lastAutoTable.finalY;
+
+             const meterBody = [
+                ['HM Awal', sanitizeHTML(report.hm_awal_start) || '-', 'KM Awal', sanitizeHTML(report.km_awal_start) || '-'],
+                ['HM Akhir', sanitizeHTML(report.hm_akhir) || '-', 'KM Akhir', sanitizeHTML(report.km_akhir) || '-'],
+             ];
+
+             doc.autoTable({
+                startY: lastY,
+                body: meterBody,
+                theme: 'grid',
+                styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
+                headStyles: { fillColor: '#f1f5f9', textColor: greyColor, fontStyle: 'bold' },
+             })
+             lastY = doc.lastAutoTable.finalY + 10;
+
+             // Tabel Ritase
+             doc.setFont('helvetica', 'bold');
+             doc.setFontSize(12);
+             doc.setTextColor(greyColor);
+             doc.text('Log Ritase', margin, lastY);
+             lastY += 2;
+
+             const ritaseHead = [['Waktu', 'Ritase Tercatat (Menit)']];
+             const ritaseBody = Object.keys(report.ritase).sort(sortRitaseHours(report.shift))
+                .map(hour => [hour, (report.ritase[hour] || []).map(m => String(m).padStart(2, '0')).sort((a,b) => a - b).join(', ')]);
+             
+             doc.autoTable({ 
+                 head: ritaseHead, 
+                 body: ritaseBody, 
+                 startY: lastY, 
+                 theme: 'striped', 
+                 headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, 
+                 styles: { cellPadding: 2, fontSize: 9, valign: 'top' }, 
+                 columnStyles: { 0: { cellWidth: 40 } } 
+            });
+             lastY = doc.lastAutoTable.finalY + 10;
+
+             // Tabel Fuel
+             if (report.fuel_logs && report.fuel_logs.length > 0) {
+                 doc.setFont('helvetica', 'bold');
+                 doc.setFontSize(12);
+                 doc.setTextColor(greyColor);
+                 doc.text('Log Pengisian Fuel', margin, lastY);
+                 lastY += 2;
+
+                 const fuelHead = [['HM Pengisian', 'Jumlah (Liter)']];
+                 const fuelBody = report.fuel_logs.map(log => [log.hm, log.liter]);
+                 doc.autoTable({ 
+                     head: fuelHead, 
+                     body: fuelBody, 
+                     startY: lastY, 
+                     theme: 'striped', 
+                     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, 
+                     styles: { cellPadding: 2, fontSize: 9 } 
+                });
+                 lastY = doc.lastAutoTable.finalY + 10;
+             }
+             
+             // Catatan
+             if(report.note) {
+                 doc.setFont('helvetica', 'bold');
+                 doc.setFontSize(12);
+                 doc.setTextColor(greyColor);
+                 doc.text('Catatan:', margin, lastY);
+                 lastY += 5;
+                 doc.setFont('helvetica', 'normal');
+                 doc.setFontSize(10);
+                 doc.text(doc.splitTextToSize(report.note, pageW - (margin * 2)), margin, lastY);
+             }
+
+             // Footer
+             const pageCount = doc.internal.getNumberOfPages();
+             for(let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(`Laporan dibuat oleh sistem pada ${new Date().toLocaleString('id-ID')}`, margin, doc.internal.pageSize.getHeight() - 10);
+                doc.text(`Halaman ${i} dari ${pageCount}`, pageW - margin, doc.internal.pageSize.getHeight() - 10, {align: 'right'});
+             }
+
+             const safeFileName = `LaporanHarian_${report.tanggal}_${report.unit_id.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+             doc.save(safeFileName);
+             showMessage('Berhasil!', `Laporan PDF berhasil dibuat!`);
+        }
+
+        function exportMonthlySummaryToPdf() {
+            const selectedMonth = mainMonthFilter.value;
+            const filteredReports = allReports
+                .filter(r => r.tanggal.startsWith(selectedMonth))
+                .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+            if (filteredReports.length === 0) {
+                showMessage('Tidak Ada Data', 'Tidak ada data laporan untuk diexport pada periode ini.', true);
+                return;
+            }
+
+            let totalJamKerja = 0;
+            let totalRitaseOB = 0;
+            let totalRitaseCOAL = 0;
+            
+            filteredReports.forEach(report => {
+                totalJamKerja += (report.jam_kerja || 0);
+                const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
+                if (report.jenis_muatan === 'OB') {
+                    totalRitaseOB += ritaseCount;
+                } else if (report.jenis_muatan === 'COAL') {
+                    totalRitaseCOAL += ritaseCount;
+                }
+            });
+
+            const gajiLembur = totalJamKerja * TARIF_PER_JAM;
+            const bonusRitaseOB = totalRitaseOB * TARIF_RITASE_OB;
+            const bonusRitaseCOAL = totalRitaseCOAL * TARIF_RITASE_COAL;
+            
+            const potonganKesehatan = GAJI_POKOK * PERSEN_POTONGAN_KESEHATAN;
+            const potonganKerja = GAJI_POKOK * PERSEN_POTONGAN_KERJA;
+
+            const totalPendapatanKotor = GAJI_POKOK + gajiLembur + bonusRitaseOB + bonusRitaseCOAL;
+            const totalPotongan = potonganKesehatan + potonganKerja;
+            const pendapatanBersih = totalPendapatanKotor - totalPotongan;
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageW = doc.internal.pageSize.getWidth();
+            const primaryColor = '#0d9488';
+            const periodDate = new Date(selectedMonth + '-02T00:00:00Z');
+            const periodText = periodDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+            
+            // Header
+            doc.setFillColor(primaryColor);
+            doc.rect(0, 0, pageW, 30, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.setTextColor(255, 255, 255);
+            doc.text('SLIP GAJI OPERATOR', pageW / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(`Periode: ${periodText}`, pageW / 2, 23, { align: 'center' });
+            
+            // Info Karyawan
+            doc.setFontSize(10);
+            doc.setTextColor(0,0,0);
+            doc.text(`Nama: ${sanitizeHTML(currentUser.full_name)}`, 14, 40);
+            doc.text(`NIK: ${sanitizeHTML(currentUser.nik)}`, 14, 45);
+
+            // Rincian Pendapatan
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('A. PENDAPATAN', 14, 60);
+            const pendapatanBody = [
+                ['Gaji Pokok', '', formatCurrency(GAJI_POKOK)],
+                ['Insentif HM (Lembur)', `${totalJamKerja.toFixed(2)} jam x ${formatCurrency(TARIF_PER_JAM)}`, formatCurrency(gajiLembur)],
+                ['Insentif OB', `${totalRitaseOB} rit x ${formatCurrency(TARIF_RITASE_OB)}`, formatCurrency(bonusRitaseOB)],
+                ['Insentif CG', `${totalRitaseCOAL} rit x ${formatCurrency(TARIF_RITASE_COAL)}`, formatCurrency(bonusRitaseCOAL)],
+            ];
+            doc.autoTable({
+                body: pendapatanBody, startY: 65, theme: 'plain', styles: { fontSize: 10 },
+                columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
+            });
+            let lastY = doc.lastAutoTable.finalY;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Pendapatan Kotor', 14, lastY + 5);
+            doc.text(formatCurrency(totalPendapatanKotor), pageW - 14, lastY + 5, { align: 'right' });
+
+            // Rincian Potongan
+            lastY += 15;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('B. POTONGAN', 14, lastY);
+            const potonganBody = [
+                ['BPJS Kesehatan (1%)', '', formatCurrency(potonganKesehatan)],
+                ['BPJS Ketenagakerjaan (3%)', '', formatCurrency(potonganKerja)],
+            ];
+            doc.autoTable({
+                body: potonganBody, startY: lastY + 5, theme: 'plain', styles: { fontSize: 10 },
+                columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
+            });
+            lastY = doc.lastAutoTable.finalY;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Potongan', 14, lastY + 5);
+            doc.text(formatCurrency(totalPotongan), pageW - 14, lastY + 5, { align: 'right' });
+
+            // Take Home Pay
+            lastY += 15;
+            doc.setFillColor(230, 240, 255);
+            doc.rect(14, lastY - 5, pageW - 28, 12, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(0,0,0);
+            doc.text('PENDAPATAN BERSIH (Take Home Pay)', 16, lastY + 2);
+            doc.text(formatCurrency(pendapatanBersih), pageW - 16, lastY + 2, { align: 'right' });
+            
+            lastY += 10;
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Dokumen ini dibuat secara otomatis oleh sistem pada ${new Date().toLocaleString('id-ID')}`, 14, lastY + 10);
+            
+            doc.addPage();
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Lampiran: Log Kerja Harian', 14, 20);
+            const detailHead = [['Tanggal', 'Unit', 'Tipe', 'Jam Kerja', 'Jml Ritase']];
+            const detailBody = filteredReports.map(report => {
+                const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
+                return [ formatDate(report.tanggal), `${report.unit_type} ${report.unit_id}`, report.jenis_muatan, (report.jam_kerja || 0).toFixed(2), ritaseCount ];
+            });
+            doc.autoTable({ head: detailHead, body: detailBody, startY: 25, theme: 'striped', headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 9 }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } } });
+
+            const safeUserName = (userNameEl.textContent || 'operator').replace(/[^a-z0-9]/gi, '_');
+            const safeFileName = `SlipGaji_${safeUserName}_${selectedMonth}.pdf`;
+            doc.save(safeFileName);
+            showMessage('Berhasil!', 'Slip Gaji PDF berhasil dibuat!');
+        }
+        
+        exportPdfBtn.addEventListener('click', exportMonthlySummaryToPdf);
 
         // --- GPS Auto-Ritase Event Listeners ---
         setupGeofenceBtn.addEventListener('click', setupGeofenceArea);
