@@ -1,0 +1,25 @@
+{
+  "name": "TimeSheet PT.EPM",
+  "short_name": "TimeSheetEPM",
+  "description": "Aplikasi timesheet untuk PT. EPM - Bekerja Offline",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "id"
+}
