@@ -1,5 +1,5 @@
-// sw.js (Optimized for Koyeb Free)
-const CACHE_NAME = 'timesheet-cache-v3';
+// sw.js (Enhanced Offline Support)
+const CACHE_NAME = 'timesheet-cache-v4';
 const urlsToCache = [
   './',
   './index.html',
@@ -10,26 +10,79 @@ const urlsToCache = [
   './js/jspdf.umd.min.js',
   './js/jspdf.plugin.autotable.min.js',
   './icon-192x192.png',
-  './icon-512x512.png'
+  './icon-512x512.png',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+      .then((cache) => {
+        console.log('Cache opened');
+        return cache.addAll(urlsToCache);
+      })
+      .then(() => {
+        console.log('All resources cached');
+        return self.skipWaiting();
+      })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('Service Worker activated');
+      return self.clients.claim();
+    })
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Hanya cache request GET dan hindari caching Supabase API
-  if (event.request.method === 'GET' && !event.request.url.includes('supabase.co')) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => response || fetch(event.request))
-    );
-  } else {
-    event.respondWith(fetch(event.request));
+  // Jangan cache request ke Supabase API
+  if (event.request.url.includes('supabase.co')) {
+    return fetch(event.request);
   }
+  
+  // Cache-first strategy untuk asset lainnya
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        
+        return fetch(event.request).then((response) => {
+          // Jangan cache response yang tidak valid
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          
+          const responseToCache = response.clone();
+          
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+            
+          return response;
+        });
+      })
+      .catch(() => {
+        // Fallback untuk halaman
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      })
+  );
 });
 
 // Menangani pesan dari aplikasi utama
@@ -38,12 +91,26 @@ self.addEventListener('message', (event) => {
     registerGeofence(event.data.geofence);
   } else if (event.data.type === 'UNREGISTER_GEOFENCE') {
     unregisterGeofence();
+  } else if (event.data.type === 'CHECK_GEOFENCE_SUPPORT') {
+    checkGeofenceSupport().then(supported => {
+      event.ports[0].postMessage({ supported });
+    });
   }
 });
+
+// Memeriksa dukungan Geofencing API
+async function checkGeofenceSupport() {
+  return 'geofencing' in navigator;
+}
 
 // Mendaftarkan geofence
 async function registerGeofence(geofence) {
   try {
+    if (!('geofencing' in navigator)) {
+      console.warn('Geofencing API tidak didukung');
+      return;
+    }
+    
     // Hapus geofence yang ada terlebih dahulu
     const registrations = await self.navigator.geofencing.getRegistrations();
     for (const registration of registrations) {
@@ -67,6 +134,8 @@ async function registerGeofence(geofence) {
 // Menghapus pendaftaran geofence
 async function unregisterGeofence() {
   try {
+    if (!('geofencing' in navigator)) return;
+    
     const registrations = await self.navigator.geofencing.getRegistrations();
     for (const registration of registrations) {
       await self.navigator.geofencing.removeRegistration(registration.id);
@@ -122,7 +191,8 @@ async function handleGeofenceEvent(type, event) {
       self.registration.showNotification('Auto-Ritase', {
         body: 'Ritase tercatat otomatis saat meninggalkan area muatan.',
         icon: './icon-192x192.png',
-        tag: 'ritase-notification'
+        tag: 'ritase-notification',
+        requireInteraction: true
       });
     }
   }
@@ -155,4 +225,16 @@ function openDatabase() {
     request.onsuccess = (event) => resolve(event.target.result);
     request.onerror = (event) => reject(event.target.error);
   });
+}
+
+// Background Sync untuk sinkronisasi data
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
+  }
+});
+
+async function doBackgroundSync() {
+  console.log('Background sync triggered');
+  // Di sini bisa ditambahkan logika sinkronisasi data
 }
