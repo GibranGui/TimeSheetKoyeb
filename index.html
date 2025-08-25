@@ -200,6 +200,40 @@
                 bottom: 5rem;
             }
         }
+
+        /* Error Message Styling */
+        .error-message {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .error-message i {
+            font-size: 1.25rem;
+        }
+        
+        .config-help {
+            background-color: #dbeafe;
+            color: #1e40af;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .config-help ol {
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .config-help li {
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -537,7 +571,7 @@
     <script>
     // --- Inisialisasi Supabase & Variabel Global ---
     const SUPABASE_URL = 'https://hwajcditsdmebqmflqsm.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
 
     // --- Konstanta Gaji ---
     const GAJI_POKOK = 3703206;
@@ -549,8 +583,13 @@
 
     let _supabase;
     if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('URL_ANDA')) {
-        const { createClient } = supabase;
-        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        try {
+            const { createClient } = supabase;
+            _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log("Supabase client berhasil diinisialisasi");
+        } catch (error) {
+            console.error("Gagal menginisialisasi Supabase client:", error);
+        }
     }
 
     // --- Logika Database IndexedDB ---
@@ -733,10 +772,38 @@
             await initDB();
             loadingText.textContent = 'Memuat data...';
             
+            // Periksa konfigurasi Supabase
             if (!_supabase) {
-                document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
+                const errorHtml = `
+                    <div class="glass-card p-6">
+                        <h2 class="text-xl font-bold text-red-600 mb-4 flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Konfigurasi Supabase Diperlukan
+                        </h2>
+                        <p class="mb-4">Terjadi kesalahan dalam konfigurasi Supabase. Pastikan:</p>
+                        <div class="config-help">
+                            <ol>
+                                <li>URL dan kunci API Supabase sudah benar</li>
+                                <li>Tabel 'profiles' sudah dibuat di database Supabase</li>
+                                <li>Kebijakan RLS (Row Level Security) sudah dikonfigurasi dengan benar</li>
+                            </ol>
+                        </div>
+                        <div class="error-message mt-4">
+                            <i class="fas fa-bug"></i>
+                            <span>Gagal menginisialisasi Supabase client</span>
+                        </div>
+                        <button id="retry-init-btn" class="btn btn-primary mt-4">
+                            <i class="fas fa-redo mr-2"></i>Coba Lagi
+                        </button>
+                    </div>
+                `;
+                
+                document.body.innerHTML = errorHtml;
+                document.getElementById('retry-init-btn').addEventListener('click', () => {
+                    window.location.reload();
+                });
                 return;
-            };
+            }
 
             // Sembunyikan loading overlay
             setTimeout(() => {
@@ -1410,18 +1477,23 @@
                 return;
             }
 
-            const { data, error } = await _supabase
-                .from('profiles')
-                .select('nik, full_name')
-                .eq('nik', nik)
-                .single();
+            try {
+                const { data, error } = await _supabase
+                    .from('profiles')
+                    .select('nik, full_name')
+                    .eq('nik', nik)
+                    .single();
 
-            if (error || !data) {
-                showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
-            } else {
-                currentUser = data;
-                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-                initializeAppUI();
+                if (error || !data) {
+                    showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
+                } else {
+                    currentUser = data;
+                    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                    initializeAppUI();
+                }
+            } catch (error) {
+                console.error('Error saat login:', error);
+                showMessage('Login Gagal', 'Terjadi kesalahan saat menghubungi server. Pastikan koneksi internet Anda stabil.', true);
             }
         });
 
@@ -1435,27 +1507,32 @@
                 return;
             }
 
-            const { data: existingUser, error: checkError } = await _supabase
-                .from('profiles')
-                .select('nik')
-                .eq('nik', nik)
-                .single();
+            try {
+                const { data: existingUser, error: checkError } = await _supabase
+                    .from('profiles')
+                    .select('nik')
+                    .eq('nik', nik)
+                    .single();
 
-            if (existingUser) {
-                showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
-                return;
-            }
+                if (existingUser) {
+                    showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar. Silakan masuk.', true);
+                    return;
+                }
 
-            const { error } = await _supabase.from('profiles').insert([
-                { nik: nik, full_name: fullName }
-            ]);
-            
-            if (error) {
-                showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
-            } else {
-                showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
-                registerForm.reset();
-                showLoginLink.click();
+                const { error } = await _supabase.from('profiles').insert([
+                    { nik: nik, full_name: fullName }
+                ]);
+                
+                if (error) {
+                    showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
+                } else {
+                    showMessage('Pendaftaran Berhasil', 'Akun Anda telah berhasil dibuat. Silakan masuk menggunakan NIK Anda.');
+                    registerForm.reset();
+                    showLoginLink.click();
+                }
+            } catch (error) {
+                console.error('Error saat registrasi:', error);
+                showMessage('Pendaftaran Gagal', 'Terjadi kesalahan saat menghubungi server. Pastikan koneksi internet Anda stabil.', true);
             }
         });
 
@@ -2279,1231 +2356,9 @@
         
         saveGeofenceBtn.addEventListener('click', saveGeofenceArea);
         
-        // Load saved geofence on startup
         loadGeofence();
         
         checkLoginState();
-    });
-    </script>
-</body>
-                                                                                                     </html>"hidden container mx-auto max-w-5xl p-4 md:p-6 pb-24">
-        <header class="flex justify-between items-center mb-8">
-            <div class="font-black text-2xl tracking-tight">
-                TimeSheet<span>PT<span class="text-teal-500">.</span>EPM
-            </div>
-            <div class="flex items-center gap-2 md:gap-4">
-                <div class="text-right hidden md:block">
-                    <p id="user-name" class="font-bold"></p>
-                    <p id="user-nik" class="text-xs text-slate-500"></p>
-                </div>
-                <button id="logout-btn" class="glass-card !rounded-full h-12 w-12 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-colors" aria-label="Keluar">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-                <button id="theme-toggle" class="glass-card !rounded-full h-12 w-12 flex items-center justify-center text-slate-500 hover:text-teal-500 transition-colors" aria-label="Ubah Tema">
-                    <i class="fas fa-sun" id="theme-icon-sun"></i>
-                    <i class="fas fa-moon hidden" id="theme-icon-moon"></i>
-                </button>
-            </div>
-        </header>
-
-        <main id="main-content" class="space-y-8">
-            <!-- Bagian Form (Awalnya tersembunyi) -->
-            <div id="form-container" class="hidden">
-                 <div class="glass-card p-6 md:p-8 relative">
-                    <form id="timesheet-form">
-                        <button type="button" id="back-to-dashboard-btn" class="absolute top-4 left-4 text-slate-400 hover:text-teal-500 transition-colors"><i class="fas fa-arrow-left mr-2"></i>Kembali</button>
-                        
-                        <!-- Langkah 1: Info Awal -->
-                        <div id="step-1">
-                            <h2 class="section-title mt-8"><i class="fas fa-play-circle"></i>Mulai Sesi Kerja Baru</h2>
-                            <div class="space-y-5">
-                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                     <div class="form-input-group"><i class="fas fa-truck-pickup form-input-icon"></i><input type="text" id="unit-type-start" placeholder="Tipe Unit (Cth: DT)" class="form-input uppercase"></div>
-                                     <div class="form-input-group"><i class="fas fa-hashtag form-input-icon"></i><input type="text" id="unit-id-start" placeholder="ID Unit (Cth: 80)" class="form-input uppercase"></div>
-                                     <div class="form-input-group"><i class="fas fa-calendar-alt form-input-icon"></i><input type="date" id="tanggal" class="form-input"></div>
-                                     <div class="form-input-group"><i class="fas fa-clock form-input-icon"></i><select id="shift" class="form-input"><option value="" disabled selected>Pilih Shift...</option><option value="Siang">Siang (07-19)</option><option value="Malam">Malam (19-07)</option></select></div>
-                                     <div class="form-input-group"><i class="fas fa-truck-loading form-input-icon"></i><select id="jenis-muatan" class="form-input"><option value="" disabled selected>Pilih Muatan...</option><option value="OB">OB</option><option value="COAL">COAL</option></select></div>
-                                     <div class="form-input-group"><i class="fas fa-tachometer-alt form-input-icon"></i><input type="number" step="0.01" id="hm-awal-start" placeholder="HM Awal" class="form-input"></div>
-                                     <div class="form-input-group"><i class="fas fa-road form-input-icon"></i><input type="number" step="0.01" id="km-awal-start" placeholder="KM Awal" class="form-input"></div>
-                                </div>
-                                <button type="button" id="start-session-btn" class="btn btn-primary !py-4"><i class="fas fa-arrow-right mr-3"></i>Mulai & Catat Ritase</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Langkah 2: Sesi Aktif -->
-                        <div id="step-2" class="hidden">
-                             <div class="bg-teal-500/10 p-4 rounded-xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center border border-teal-500/20">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-spinner fa-spin text-2xl text-teal-500"></i>
-                                    <div>
-                                        <h3 class="text-lg font-bold text-teal-600">Sesi Aktif</h3>
-                                        <div id="step-1-summary" class="text-xs md:text-sm text-teal-700 dark:text-teal-400"></div>
-                                    </div>
-                                </div>
-                                <button type="button" id="cancel-session-btn" class="btn btn-danger !w-auto !py-2 px-4 mt-4 md:mt-0"><i class="fas fa-times-circle mr-2"></i>Batalkan Sesi</button>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Kolom Pencatatan Ritase -->
-                                <div class="glass-card p-6 space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <h3 class="section-title !text-xl !mb-0"><i class="fas fa-stopwatch"></i>Pencatatan Ritase</h3>
-                                        <span id="current-time" class="text-sm font-semibold text-slate-500"></span>
-                                    </div>
-                                    <div class="overflow-x-auto bg-white/50 dark:bg-slate-800/50 rounded-lg shadow-inner max-h-60">
-                                        <table class="w-full text-sm">
-                                            <thead class="bg-black/5 dark:bg-white/5">
-                                                <tr>
-                                                    <th class="p-3 font-semibold text-left">Waktu</th>
-                                                    <th class="p-3 font-semibold text-left">Ritase Tercatat (Menit)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="ritase-table-body"></tbody>
-                                        </table>
-                                    </div>
-                                    <div id="ritase-summary-cards" class="grid grid-cols-2 gap-4">
-                                        <div class="glass-card p-4 text-center">
-                                            <p class="text-sm text-slate-500">Total Ritase</p>
-                                            <p id="total-ritase-summary" class="font-black text-indigo-500 text-3xl">0</p>
-                                        </div>
-                                        <div class="glass-card p-4 text-center">
-                                            <p class="text-sm text-slate-500">Avg. Cycle Time</p>
-                                            <p id="cycle-time-summary" class="font-black text-teal-500 text-3xl">0m 0s</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- GPS Auto-Ritase Card -->
-                                    <div id="gps-ritase-card" class="gps-status-card glass-card p-4 bg-slate-100 dark:bg-slate-800">
-                                        <h3 class="font-bold mb-2 flex items-center">
-                                            <i class="fas fa-satellite mr-2 text-teal-500"></i>
-                                            GPS Auto-Ritase
-                                            <span class="radius-badge">50m</span>
-                                            <span id="gps-status-indicator" class="gps-status-indicator gps-status-off ml-2"></span>
-                                        </h3>
-                                        <div class="text-sm mb-3">
-                                            <div class="flex items-center mb-1">
-                                                <span class="geofence-marker geofence-inactive" id="geofence-status-icon"></span>
-                                                Status: <span id="geofence-status-text" class="font-medium ml-1">Tidak Aktif</span>
-                                            </div>
-                                            <div class="flex items-center mb-1">
-                                                <i class="fas fa-crosshairs mr-2 text-blue-500"></i>
-                                                Akurasi: <span id="gps-accuracy" class="font-medium ml-1">-</span>
-                                            </div>
-                                            <div class="flex items-center">
-                                                <i class="fas fa-map-marker-alt mr-2 text-purple-500"></i>
-                                                Terdeteksi: <span id="geofence-trigger-count" class="font-medium ml-1">0</span> kali
-                                            </div>
-                                            <div class="gps-debug" id="gps-debug-info">
-                                                Jarak: - | Status: Menunggu
-                                            </div>
-                                        </div>
-                                        <div class="flex space-x-2">
-                                            <button type="button" id="setup-geofence-btn" class="btn btn-secondary flex-1 !py-2 text-sm">
-                                                <i class="fas fa-bullseye mr-1"></i>Setup Area
-                                            </button>
-                                            <button type="button" id="toggle-gps-btn" class="btn btn-gray flex-1 !py-2 text-sm">
-                                                <i class="fas fa-play mr-1"></i>Mulai
-                                            </button>
-                                        </div>
-                                        <div id="geofence-coords" class="text-xs mt-2 text-slate-500 hidden">
-                                            Area: <span id="geofence-lat"></span>, <span id="geofence-lng"></span> (Radius: 50m)
-                                        </div>
-                                    </div>
-                                    
-                                    <button type="button" id="record-ritase-btn" class="btn btn-secondary w-full" title="Catat waktu ritase saat ini">
-                                        <i class="fas fa-plus-circle mr-2"></i>Catat Ritase Sekarang
-                                    </button>
-                                </div>
-
-                                <!-- Kolom Pencatatan Fuel & Penyelesaian -->
-                                <div class="space-y-6">
-                                    <div class="glass-card p-6">
-                                        <h3 class="section-title !text-xl !mb-4"><i class="fas fa-gas-pump"></i>Pencatatan Fuel</h3>
-                                        <div class="space-y-4">
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div class="form-input-group"><i class="fas fa-tachometer-alt form-input-icon"></i><input type="number" step="0.01" id="hm-fuel" placeholder="HM saat isi Fuel" class="form-input"></div>
-                                                <div class="form-input-group"><i class="fas fa-tint form-input-icon"></i><input type="number" step="0.01" id="fuel-liter" placeholder="Jumlah Liter" class="form-input"></div>
-                                            </div>
-                                            <button type="button" id="save-fuel-btn" class="btn btn-secondary !py-3"><i class="fas fa-save mr-2"></i>Simpan Catatan Fuel</button>
-                                        </div>
-                                        <div id="fuel-log-history" class="mt-4"></div>
-                                    </div>
-
-                                    <div class="glass-card p-6">
-                                        <h3 class="section-title !text-xl !mb-4"><i class="fas fa-check-circle"></i>Selesaikan Laporan</h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <div class="form-input-group"><i class="fas fa-hourglass-end form-input-icon"></i><input type="number" step="0.01" min="0" id="hm-akhir" placeholder="HM Akhir" class="form-input" required></div>
-                                            <div class="form-input-group"><i class="fas fa-road form-input-icon"></i><input type="number" step="0.01" min="0" id="km-akhir" placeholder="KM Akhir" class="form-input" required></div>
-                                        </div>
-                                        <div class="form-input-group mt-4"><i class="fas fa-pencil-alt form-input-icon"></i><textarea id="note" rows="3" class="form-input" placeholder="Catatan Aktivitas..."></textarea></div>
-                                        <button type="submit" class="btn btn-primary !py-4 mt-4"><i class="fas fa-save mr-3"></i>Simpan & Selesaikan Sesi</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Bagian Dashboard Laporan -->
-            <div id="dashboard-container">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="section-title !mb-0"><i class="fas fa-clipboard-list"></i>Laporan Kerja</h2>
-                    <button id="new-session-btn" class="btn btn-primary !w-auto !py-2.5 px-4"><i class="fas fa-plus mr-2"></i>Sesi Baru</button>
-                </div>
-
-                <div id="active-session-container" class="mb-6"></div>
-
-                <div class="glass-card p-6">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div class="w-full md:w-auto flex-grow">
-                             <label for="main-month-filter" class="text-sm font-medium text-slate-500 mb-2 block">Dashboard Laporan Bulan</label>
-                             <select id="main-month-filter" class="form-input !p-3 !pl-5 w-full font-bold text-lg"></select>
-                        </div>
-                       <div id="total-card" class="w-full md:w-auto bg-gradient-to-tr from-teal-500 to-cyan-500 text-white p-4 rounded-xl text-center hidden shadow-lg">
-                           <p class="text-sm font-medium uppercase tracking-wider">Total Jam</p>
-                           <p id="grand-total-jam" class="font-black text-4xl tracking-tighter">0.00</p>
-                       </div>
-                    </div>
-                </div>
-                <div id="report-list-container" class="space-y-4 mt-6"></div>
-                
-                <div id="export-section" class="hidden pt-4 glass-card p-6 mt-6">
-                    <h3 class="section-title !text-xl !mb-4"><i class="fas fa-file-invoice-dollar"></i>Buat Laporan Gaji Bulanan</h3>
-                    <div class="text-sm text-slate-500 dark:text-slate-400 mb-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                        <p class="font-semibold text-base">Komponen Gaji & Potongan (Otomatis):</p>
-                        <ul class="list-disc list-inside ml-2">
-                            <li>Gaji Pokok: <strong>Rp3.703.206</strong></li>
-                            <li>Gaji per Jam (Lembur): <strong>Rp15.000</strong></li>
-                            <li>Bonus Ritase OB: <strong>Rp400</strong></li>
-                            <li>Bonus Ritase COAL: <strong>Rp1.250</strong></li>
-                            <li>Potongan BPJS Kesehatan: <strong>1%</strong> dari Gaji Pokok</li>
-                            <li>Potongan BPJS Ketenagakerjaan: <strong>3%</strong> dari Gaji Pokok</li>
-                        </ul>
-                    </div>
-                    <button id="export-pdf-btn" class="btn btn-danger mt-5"><i class="fas fa-file-pdf mr-3"></i>Buat Slip Gaji PDF</button>
-                </div>
-                
-                <div id="no-data-for-month" class="text-center py-16 hidden glass-card mt-6"><i class="fas fa-calendar-times text-5xl text-slate-400 mb-4"></i><p class="font-semibold text-lg">Tidak ada laporan untuk periode ini.</p></div>
-                <div id="empty-state" class="text-center py-16 glass-card mt-6"><i class="fas fa-folder-open text-6xl text-slate-400 mb-5"></i><p class="font-semibold text-xl">Dashboard Kosong</p><p class="text-sm text-slate-500 mt-2">Buat sesi kerja baru untuk melihat laporan Anda di sini.</p></div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- Modals -->
-    <div id="message-modal" class="fixed inset-0 modal-bg items-center justify-center hidden z-50 p-4">
-         <div class="glass-card p-8 w-full max-w-sm m-4 fade-in text-center">
-            <div id="message-modal-icon" class="mb-5"></div>
-            <h3 id="message-modal-title" class="text-xl font-bold"></h3>
-            <p id="message-modal-text" class="text-sm text-slate-400 mt-2 mb-6"></p>
-            <button id="message-modal-close-btn" class="btn btn-primary w-full">Tutup</button>
-        </div>
-    </div>
-    <div id="detail-modal" class="fixed inset-0 modal-bg items-center justify-center hidden z-50 p-4 overflow-y-auto">
-        <div class="glass-card p-6 w-full max-w-2xl m-4 fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h2 id="detail-modal-title" class="text-xl font-bold">Detail Laporan</h2>
-                    <p id="detail-modal-info" class="text-sm text-slate-400"></p>
-                </div>
-                <button id="close-detail-modal-btn" class="text-slate-400 hover:text-white h-8 w-8 text-2xl">&times;</button>
-            </div>
-            <div id="detail-modal-content" class="space-y-4"></div>
-            <div class="mt-6 flex gap-4">
-                <button id="close-detail-modal-btn-2" class="btn btn-gray w-1/3">Tutup</button>
-                <button id="export-single-pdf-btn" class="btn btn-danger w-2/3"><i class="fas fa-file-pdf mr-2"></i>Export PDF</button>
-            </div>
-        </div>
-    </div>
-    <div id="confirm-modal" class="fixed inset-0 modal-bg items-center justify-center hidden z-50 p-4">
-         <div class="glass-card p-8 w-full max-w-sm m-4 fade-in text-center">
-            <div class="mb-4"><i class="fas fa-exclamation-triangle text-6xl text-yellow-400"></i></div>
-            <h3 id="confirm-modal-title" class="text-lg font-bold"></h3>
-            <p id="confirm-modal-text" class="text-sm text-slate-400 mt-2 mb-6"></p>
-            <div class="flex gap-4">
-                <button id="confirm-modal-cancel-btn" class="btn btn-gray w-1/2">Batal</button>
-                <button id="confirm-modal-confirm-btn" class="btn btn-danger w-1/2">Ya, Hapus</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal Setup Area Muatan -->
-    <div id="geofence-setup-modal" class="fixed inset-0 modal-bg items-center justify-center hidden z-50 p-4">
-        <div class="glass-card p-6 w-full max-w-md m-4 fade-in">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i class="fas fa-bullseye mr-2 text-teal-500"></i>
-                Setup Area Muatan (Radius 50m)
-            </h2>
-            <p class="text-sm text-slate-500 mb-4">
-                Posisikan diri Anda di area muatan dan tekan tombol di bawah untuk menyimpan koordinat. Sistem akan otomatis mencatat ritase ketika Anda memasuki atau meninggalkan area ini.
-            </p>
-            
-            <div class="mb-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm">Akurasi GPS:</span>
-                    <span id="setup-accuracy" class="font-bold">-</span>
-                </div>
-                <div class="text-xs text-slate-500">
-                    Pastikan akurasi di bawah 20 meter untuk hasil terbaik
-                </div>
-            </div>
-            
-            <div class="flex gap-3">
-                <button type="button" id="cancel-setup-btn" class="btn btn-gray w-1/2">Batal</button>
-                <button type="button" id="save-geofence-btn" class="btn btn-primary w-1/2">
-                    <i class="fas fa-save mr-1"></i>Simpan Area
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    // --- Inisialisasi Supabase & Variabel Global ---
-    const SUPABASE_URL = 'https://hwajcditsdmebqmflqsm.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWpjZGl0c2RtZWJxbWZscXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0OTMzOTEsImV4cCI6MjA2OTA2OTM5MX0.Puq5NWeNHdtHlE8bem4QUqvIcHVyqR_AR5IlpiG-hz8';
-
-    // --- Konstanta Gaji ---
-    const GAJI_POKOK = 3703206;
-    const TARIF_PER_JAM = 15000;
-    const TARIF_RITASE_OB = 400;
-    const TARIF_RITASE_COAL = 1250;
-    const PERSEN_POTONGAN_KESEHATAN = 0.01; // 1%
-    const PERSEN_POTONGAN_KERJA = 0.03; // 3%
-
-    let _supabase;
-    if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('URL_ANDA')) {
-        const { createClient } = supabase;
-        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-
-    // --- Logika Database IndexedDB ---
-    const DB_NAME = 'LaporanKerjaDB_v10_Offline';
-    const DB_VERSION = 1;
-    let db;
-
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('reports')) {
-                    const store = db.createObjectStore('reports', { keyPath: 'id' });
-                    store.createIndex('status', 'status', { unique: false });
-                    store.createIndex('user_nik', 'user_nik', { unique: false });
-                }
-            };
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                console.log('Database IndexedDB berhasil diinisialisasi.');
-                resolve(db);
-            };
-            request.onerror = (event) => reject('Kesalahan database: ' + event.target.error);
-        });
-    }
-
-    function dbAction(storeName, mode, action) {
-        return new Promise((resolve, reject) => {
-            if (!db) { return reject("Database belum diinisialisasi"); }
-            try {
-                const transaction = db.transaction(storeName, mode);
-                const store = transaction.objectStore(storeName);
-                action(store, resolve, reject);
-                transaction.onerror = (event) => reject(event.target.error);
-            } catch (error) {
-                console.error("Gagal memulai transaksi DB:", error);
-                reject(error);
-            }
-        });
-    }
-
-    const localDb = {
-        getReports: (userNik) => dbAction('reports', 'readonly', (store, resolve) => {
-            const index = store.index('user_nik');
-            index.getAll(userNik).onsuccess = (e) => resolve(e.target.result);
-        }),
-        saveReport: (report) => dbAction('reports', 'readwrite', (store, resolve) => store.put(report).onsuccess = resolve),
-        deleteReport: (id) => dbAction('reports', 'readwrite', (store, resolve) => store.delete(id).onsuccess = resolve),
-        getPending: (userNik) => dbAction('reports', 'readonly', (store, resolve, reject) => { 
-            const index = store.index('status');
-            const creationsRequest = index.getAll('pending_creation');
-            const deletionsRequest = index.getAll('pending_deletion');
-            
-            Promise.all([
-                new Promise((res, rej) => { creationsRequest.onsuccess = e => res(e.target.result.filter(r => r.user_nik === userNik)); creationsRequest.onerror = e => rej(e.target.error); }),
-                new Promise((res, rej) => { deletionsRequest.onsuccess = e => res(e.target.result.filter(r => r.user_nik === userNik)); deletionsRequest.onerror = e => rej(e.target.error); })
-            ]).then(([creations, deletions]) => resolve({ creations, deletions }))
-              .catch(reject);
-        }),
-        clearUserReports: (userNik) => dbAction('reports', 'readwrite', (store, resolve) => {
-            const index = store.index('user_nik');
-            const request = index.openCursor(IDBKeyRange.only(userNik));
-            request.onsuccess = (event) => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    cursor.delete();
-                    cursor.continue();
-                } else {
-                    resolve();
-                }
-            };
-        })
-    };
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingText = document.getElementById('loading-text');
-        const offlineIndicator = document.getElementById('offline-indicator');
-        const onlineIndicator = document.getElementById('online-indicator');
-
-        // --- Logika Status Koneksi ---
-        function updateConnectionStatus() {
-            if (navigator.onLine) {
-                offlineIndicator.style.display = 'none';
-            } else {
-                onlineIndicator.style.display = 'none';
-                offlineIndicator.style.display = 'block';
-            }
-        }
-        window.addEventListener('online', async () => {
-            updateConnectionStatus();
-            onlineIndicator.style.display = 'block';
-            if (currentUser) {
-                await syncToServer();
-            }
-            setTimeout(() => { onlineIndicator.style.display = 'none'; }, 3000);
-        });
-        window.addEventListener('offline', updateConnectionStatus);
-
-        // --- Logika Instal PWA ---
-        let deferredPrompt;
-        const installBtn = document.getElementById('install-btn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.classList.remove('hidden');
-        });
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                installBtn.classList.add('hidden');
-            }
-        });
-
-        // --- Registrasi Service Worker ---
-        if ('serviceWorker' in navigator) {
-            loadingText.textContent = 'Mendaftarkan Service Worker...';
-            try {
-                await navigator.serviceWorker.register('./sw.js');
-                console.log('Service Worker terdaftar.');
-            } catch (error) {
-                console.log('Registrasi Service Worker gagal:', error);
-            }
-        }
-
-        // --- Inisialisasi Aplikasi ---
-        if (!_supabase) {
-            document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif;"><h1>Konfigurasi Supabase Diperlukan</h1><p>Silakan edit file index.html dan masukkan URL serta Kunci Anon Supabase Anda.</p></div>`;
-            return;
-        }
-        loadingText.textContent = 'Menyiapkan database...';
-        await initDB();
-        loadingText.textContent = 'Memuat data...';
-        
-        setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-            checkLoginState();
-        }, 500);
-
-        // --- SELEKTOR ELEMEN ---
-        const el = (selector) => document.querySelector(selector);
-        const authPage = el('#auth-page'), appPage = el('#app-page');
-        const loginForm = el('#login-form'), registerForm = el('#register-form');
-        const showRegisterLink = el('#show-register-link'), showLoginLink = el('#show-login-link');
-        const logoutBtn = el('#logout-btn');
-        const userNameEl = el('#user-name'), userNikEl = el('#user-nik');
-        const formContainer = el('#form-container'), dashboardContainer = el('#dashboard-container');
-        const newSessionBtn = el('#new-session-btn'), backToDashboardBtn = el('#back-to-dashboard-btn');
-        const timesheetForm = el('#timesheet-form');
-        const step1Div = el('#step-1'), step2Div = el('#step-2');
-        const startSessionBtn = el('#start-session-btn'), cancelSessionBtn = el('#cancel-session-btn');
-        const step1Summary = el('#step-1-summary');
-        const tanggalInput = el('#tanggal'), shiftInput = el('#shift'), jenisMuatanInput = el('#jenis-muatan');
-        const unitTypeStartInput = el('#unit-type-start'), unitIdStartInput = el('#unit-id-start');
-        const hmAwalStartInput = el('#hm-awal-start'), kmAwalStartInput = el('#km-awal-start');
-        const hmAkhirInput = el('#hm-akhir'), kmAkhirInput = el('#km-akhir');
-        const recordRitaseBtn = el('#record-ritase-btn'), ritaseTableBody = el('#ritase-table-body');
-        const currentTimeEl = el('#current-time');
-        const totalRitaseSummary = el('#total-ritase-summary'), cycleTimeSummary = el('#cycle-time-summary');
-        const hmFuelInput = el('#hm-fuel'), fuelLiterInput = el('#fuel-liter'), saveFuelBtn = el('#save-fuel-btn');
-        const fuelLogHistoryContainer = el('#fuel-log-history');
-        const activeSessionContainer = el('#active-session-container');
-        const reportListContainer = el('#report-list-container');
-        const emptyState = el('#empty-state'), noDataForMonth = el('#no-data-for-month');
-        const totalCard = el('#total-card'), grandTotalJamEl = el('#grand-total-jam');
-        const mainMonthFilter = el('#main-month-filter');
-        const exportSection = el('#export-section'), exportPdfBtn = el('#export-pdf-btn');
-        const messageModal = el('#message-modal'), messageModalCloseBtn = el('#message-modal-close-btn');
-        const messageModalTitle = el('#message-modal-title'), messageModalText = el('#message-modal-text');
-        const detailModal = el('#detail-modal'), closeDetailModalBtn = el('#close-detail-modal-btn'), closeDetailModalBtn2 = el('#close-detail-modal-btn-2');
-        const detailModalTitle = el('#detail-modal-title'), detailModalInfo = el('#detail-modal-info'), detailModalContent = el('#detail-modal-content');
-        const exportSinglePdfBtn = el('#export-single-pdf-btn');
-        const confirmModal = el('#confirm-modal'), confirmModalCancelBtn = el('#confirm-modal-cancel-btn'), confirmModalConfirmBtn = el('#confirm-modal-confirm-btn');
-        const confirmModalTitle = el('#confirm-modal-title'), confirmModalText = el('#confirm-modal-text');
-        const themeToggle = el('#theme-toggle'), themeIconSun = el('#theme-icon-sun'), themeIconMoon = el('#theme-icon-moon');
-        const setupGeofenceBtn = el('#setup-geofence-btn'), toggleGpsBtn = el('#toggle-gps-btn');
-        const geofenceStatusIcon = el('#geofence-status-icon'), geofenceStatusText = el('#geofence-status-text');
-        const gpsAccuracy = el('#gps-accuracy'), geofenceTriggerCountEl = el('#geofence-trigger-count');
-        const geofenceCoords = el('#geofence-coords'), geofenceLat = el('#geofence-lat'), geofenceLng = el('#geofence-lng');
-        const geofenceSetupModal = el('#geofence-setup-modal'), cancelSetupBtn = el('#cancel-setup-btn'), saveGeofenceBtn = el('#save-geofence-btn');
-        const setupAccuracy = el('#setup-accuracy'), gpsRitaseCard = el('#gps-ritase-card');
-        const gpsStatusIndicator = el('#gps-status-indicator'), gpsDebugInfo = el('#gps-debug-info');
-
-        // --- STATE APLIKASI ---
-        let allReports = [], clockInterval, confirmCallback = null, currentUser = null;
-        const SESSION_KEY = 'activeWorkSession', USER_KEY = 'currentUserProfile';
-        
-        // --- GPS & Geofence Variables ---
-        const GEOLOCATION_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-        let geofenceWatchId = null, currentGeofence = null, lastGeofenceState = null;
-        let geofenceTriggerCount = 0, isMonitoringGeofence = false, lastTriggerTime = 0;
-        const TRIGGER_COOLDOWN = 30000, GEOFENCE_RADIUS = 50;
-
-        // --- LOGIKA TEMA ---
-        const applyTheme = (theme) => {
-            document.documentElement.classList.toggle('dark', theme === 'dark');
-            themeIconSun.classList.toggle('hidden', theme === 'dark');
-            themeIconMoon.classList.toggle('hidden', theme !== 'dark');
-            localStorage.setItem('theme', theme);
-        };
-        themeToggle.addEventListener('click', () => applyTheme(localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'));
-        applyTheme(localStorage.getItem('theme') || 'light');
-
-        // --- FUNGSI UTILITAS ---
-        const showMessage = (title, text, isError = false) => {
-            messageModalTitle.textContent = title;
-            messageModalText.textContent = text;
-            el('#message-modal-icon').innerHTML = isError 
-                ? `<i class="fas fa-times-circle text-6xl text-rose-500"></i>` 
-                : `<i class="fas fa-check-circle text-6xl text-teal-500"></i>`;
-            messageModal.classList.replace('hidden', 'flex');
-        };
-        const sanitizeHTML = (str) => {
-            if (!str) return '';
-            const temp = document.createElement('div');
-            temp.textContent = str;
-            return temp.innerHTML;
-        };
-        const formatDate = (dateString, long = false) => {
-            const date = new Date(dateString);
-            const options = long 
-                ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }
-                : { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' };
-            return date.toLocaleDateString('id-ID', options);
-        };
-        const formatCurrency = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-
-        // --- MANAJEMEN TAMPILAN ---
-        function showView(view) {
-            formContainer.classList.toggle('hidden', view !== 'form');
-            dashboardContainer.classList.toggle('hidden', view === 'form');
-        }
-        
-        // --- GPS & Geofence Functions ---
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-        }
-        function handleGeofenceChange(isInside, distance) {
-            if (lastGeofenceState === isInside) return;
-            const previouslyInside = lastGeofenceState === true;
-            lastGeofenceState = isInside;
-            geofenceStatusIcon.classList.toggle('geofence-active', isInside);
-            geofenceStatusIcon.classList.toggle('geofence-inactive', !isInside);
-            gpsRitaseCard.classList.toggle('gps-active', isInside);
-            geofenceStatusText.textContent = isInside ? 'Di Area Muatan' : 'Di Luar Area';
-            gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: ${isInside ? 'Di Dalam' : 'Di Luar'}`;
-            const currentTime = Date.now();
-            if (!isInside && previouslyInside && (currentTime - lastTriggerTime) > TRIGGER_COOLDOWN) {
-                geofenceTriggerCount++;
-                geofenceTriggerCountEl.textContent = geofenceTriggerCount;
-                recordRitase();
-                lastTriggerTime = currentTime;
-                showMessage('Auto-Ritase', 'Ritase tercatat otomatis saat meninggalkan area.');
-            }
-        }
-        function startGeofenceMonitoring() {
-            if (!currentGeofence) return showMessage('GPS Error', 'Area muatan belum di-setup.', true);
-            if (geofenceWatchId !== null) return;
-            if (!navigator.geolocation) return showMessage('GPS Tidak Support', 'Browser tidak mendukung geolocation.', true);
-            gpsStatusIndicator.className = 'gps-status-indicator gps-status-acquiring';
-            gpsDebugInfo.textContent = 'Mencari sinyal GPS...';
-            geofenceWatchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    gpsAccuracy.textContent = `${position.coords.accuracy.toFixed(1)} m`;
-                    gpsStatusIndicator.className = 'gps-status-indicator gps-status-on';
-                    const distance = calculateDistance(position.coords.latitude, position.coords.longitude, currentGeofence.latitude, currentGeofence.longitude);
-                    handleGeofenceChange(distance <= currentGeofence.radius, distance);
-                },
-                (error) => {
-                    showMessage('GPS Error', `Error: ${error.message}`, true);
-                    stopGeofenceMonitoring();
-                },
-                GEOLOCATION_OPTIONS
-            );
-            isMonitoringGeofence = true;
-            toggleGpsBtn.innerHTML = '<i class="fas fa-stop mr-1"></i>Berhenti';
-            toggleGpsBtn.classList.replace('btn-gray', 'btn-danger');
-        }
-        function stopGeofenceMonitoring() {
-            if (geofenceWatchId !== null) {
-                navigator.geolocation.clearWatch(geofenceWatchId);
-                geofenceWatchId = null;
-            }
-            isMonitoringGeofence = false;
-            toggleGpsBtn.innerHTML = '<i class="fas fa-play mr-1"></i>Mulai';
-            toggleGpsBtn.classList.replace('btn-danger', 'btn-gray');
-            gpsStatusIndicator.className = 'gps-status-indicator gps-status-off';
-        }
-        function setupGeofenceArea() {
-            if (!navigator.geolocation) return showMessage('GPS Tidak Support', 'Browser tidak mendukung geolocation.', true);
-            geofenceSetupModal.classList.replace('hidden', 'flex');
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setupAccuracy.textContent = `${position.coords.accuracy.toFixed(1)} m`;
-                    currentGeofence = { latitude: position.coords.latitude, longitude: position.coords.longitude, radius: GEOFENCE_RADIUS };
-                },
-                (error) => {
-                    showMessage('Error', 'Gagal mendapatkan lokasi untuk setup.', true);
-                    geofenceSetupModal.classList.replace('flex', 'hidden');
-                },
-                GEOLOCATION_OPTIONS
-            );
-        }
-        function saveGeofenceArea() {
-            if (!currentGeofence) return showMessage('Error', 'Tidak ada data lokasi yang valid.', true);
-            localStorage.setItem('geofenceArea', JSON.stringify(currentGeofence));
-            geofenceCoords.classList.remove('hidden');
-            geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
-            geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-            geofenceSetupModal.classList.replace('flex', 'hidden');
-            showMessage('Berhasil', 'Area muatan berhasil disimpan!');
-            if (getActiveSession()) startGeofenceMonitoring();
-        }
-        function loadGeofence() {
-            const savedGeofence = localStorage.getItem('geofenceArea');
-            if (savedGeofence) {
-                currentGeofence = JSON.parse(savedGeofence);
-                geofenceCoords.classList.remove('hidden');
-                geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
-                geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-            }
-        }
-
-        // --- SINKRONISASI DATA ---
-        async function syncToServer() {
-            if (!navigator.onLine || !_supabase || !currentUser) return;
-            console.log("Memulai sinkronisasi...");
-            const { creations, deletions } = await localDb.getPending(currentUser.nik);
-            if (deletions.length > 0) {
-                const { error } = await _supabase.from('reports').delete().in('id', deletions.map(r => r.id));
-                if (!error) for (const report of deletions) await localDb.deleteReport(report.id);
-            }
-            if (creations.length > 0) {
-                const reportsToCreate = creations.map(r => { 
-                    const { status, ...d } = r;
-                    d.fuel_logs = JSON.stringify(d.fuel_logs || []);
-                    d.ritase = JSON.stringify(d.ritase || {});
-                    return d;
-                });
-                const { error } = await _supabase.from('reports').upsert(reportsToCreate, { onConflict: 'id' });
-                if (!error) for (const report of creations) {
-                    report.status = 'synced';
-                    await localDb.saveReport(report);
-                }
-            }
-            await fetchFromServer();
-            await updateDashboardView();
-            console.log("Sinkronisasi selesai.");
-        }
-        async function fetchFromServer() {
-            if (!navigator.onLine || !_supabase || !currentUser) return;
-            const { data: serverReports, error } = await _supabase.from('reports').select('*').eq('user_nik', currentUser.nik);
-            if (error) { console.error("Gagal mengambil data:", error); return; }
-            for (const serverReport of serverReports) {
-                serverReport.status = 'synced';
-                try { serverReport.ritase = JSON.parse(serverReport.ritase); } catch(e) { serverReport.ritase = {}; }
-                try { serverReport.fuel_logs = JSON.parse(serverReport.fuel_logs); } catch(e) { serverReport.fuel_logs = []; }
-                await localDb.saveReport(serverReport);
-            }
-        }
-        
-        // --- LOGIKA AUTENTIKASI ---
-        function checkLoginState() {
-            const userJSON = localStorage.getItem(USER_KEY);
-            if (userJSON) {
-                currentUser = JSON.parse(userJSON);
-                initializeAppUI();
-            } else {
-                authPage.classList.remove('hidden');
-                appPage.classList.add('hidden');
-            }
-        }
-        async function initializeAppUI() {
-            authPage.classList.add('hidden');
-            appPage.classList.remove('hidden');
-            userNameEl.innerHTML = sanitizeHTML(currentUser.full_name);
-            userNikEl.innerHTML = `NIK: ${sanitizeHTML(currentUser.nik)}`;
-            if (navigator.onLine) await syncToServer();
-            await updateDashboardView();
-            loadGeofence();
-            updateConnectionStatus();
-        }
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nik = el('#login-nik').value.toUpperCase();
-            if (!nik) return showMessage('Login Gagal', 'NIK tidak boleh kosong.', true);
-            const { data, error } = await _supabase.from('profiles').select('nik, full_name').eq('nik', nik).single();
-            if (error || !data) {
-                showMessage('Login Gagal', 'NIK tidak ditemukan atau tidak terdaftar.', true);
-            } else {
-                currentUser = data;
-                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-                initializeAppUI();
-            }
-        });
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fullName = el('#register-name').value;
-            const nik = el('#register-nik').value.toUpperCase();
-            if (!fullName || !nik) return showMessage('Pendaftaran Gagal', 'Nama dan NIK tidak boleh kosong.', true);
-            const { data: existingUser } = await _supabase.from('profiles').select('nik').eq('nik', nik).single();
-            if (existingUser) return showMessage('Pendaftaran Gagal', 'NIK ini sudah terdaftar.', true);
-            const { error } = await _supabase.from('profiles').insert([{ nik, full_name: fullName }]);
-            if (error) {
-                showMessage('Pendaftaran Gagal', `Terjadi kesalahan: ${error.message}`, true);
-            } else {
-                showMessage('Pendaftaran Berhasil', 'Akun berhasil dibuat. Silakan masuk.');
-                showLoginLink.click();
-            }
-        });
-        logoutBtn.addEventListener('click', () => {
-            currentUser = null;
-            localStorage.removeItem(USER_KEY);
-            localStorage.removeItem(SESSION_KEY);
-            window.location.reload();
-        });
-        showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); });
-        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
-
-        // --- LOGIKA INTI APLIKASI ---
-        async function updateDashboardView() {
-            if (!currentUser) return;
-            renderActiveSessionCard();
-            allReports = (await localDb.getReports(currentUser.nik) || []).filter(r => r.status !== 'pending_deletion');
-            allReports.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-            emptyState.classList.toggle('hidden', allReports.length > 0 || getActiveSession());
-            populateMainMonthFilter();
-            const selectedMonth = mainMonthFilter.value || (allReports.length > 0 ? allReports[0].tanggal.substring(0, 7) : '');
-            if (mainMonthFilter.value !== selectedMonth) mainMonthFilter.value = selectedMonth;
-            renderFilteredReports(allReports.filter(r => r.tanggal.startsWith(selectedMonth)));
-        }
-        function renderActiveSessionCard() {
-            activeSessionContainer.innerHTML = '';
-            const session = getActiveSession();
-            if (session) {
-                const ritaseCount = Object.values(session.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                activeSessionContainer.innerHTML = `
-                <div class="glass-card p-5 cursor-pointer bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-lg" data-action="resume-session">
-                    <div class="flex justify-between items-center"><h3 class="text-xl font-bold flex items-center gap-3"><i class="fas fa-spinner fa-spin"></i> Sesi Aktif</h3><span class="font-bold text-sm bg-white/20 px-3 py-1 rounded-full">LANJUTKAN</span></div>
-                    <div class="mt-4 pt-4 border-t border-white/20 text-sm grid grid-cols-2 gap-2">
-                        <div><strong>Unit:</strong> ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)}</div><div><strong>Shift:</strong> ${sanitizeHTML(session.shift)}</div>
-                        <div><strong>Muatan:</strong> ${sanitizeHTML(session.jenisMuatan)}</div><div><strong>Ritase:</strong> ${ritaseCount}</div>
-                    </div>
-                </div>`;
-            }
-        }
-        activeSessionContainer.addEventListener('click', (e) => {
-            if (e.target.closest('[data-action="resume-session"]')) {
-                const session = getActiveSession();
-                if (session) resumeSession(session);
-            }
-        });
-        function resumeSession(session) {
-            showView('form');
-            step1Div.classList.add('hidden');
-            step2Div.classList.remove('hidden');
-            step1Summary.innerHTML = `Unit ${sanitizeHTML(session.unitType)} ${sanitizeHTML(session.unitId)} (${formatDate(session.tanggal, true)}) <br> HM Awal: ${sanitizeHTML(session.hmAwal)} | KM Awal: ${sanitizeHTML(session.kmAwal)}`;
-            renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
-            updateRitaseSummary(session.ritase, session.tanggal, session.shift);
-            renderFuelLogHistory(session.fuel_logs || []);
-            updateClock();
-            if (clockInterval) clearInterval(clockInterval);
-            clockInterval = setInterval(updateClock, 1000);
-            if (currentGeofence) startGeofenceMonitoring();
-        }
-        timesheetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const session = getActiveSession();
-            if (!session) return;
-            const hmAkhir = parseFloat(hmAkhirInput.value), kmAkhir = parseFloat(kmAkhirInput.value), hmAwal = parseFloat(session.hmAwal);
-            if (isNaN(hmAkhir) || isNaN(kmAkhir) || hmAkhir <= hmAwal) return showMessage('Data Tidak Valid', 'HM/KM Akhir harus angka valid dan lebih besar dari awal.', true);
-            const newReport = {
-                id: crypto.randomUUID(), user_nik: currentUser.nik, nama_operator: currentUser.full_name,
-                tanggal: session.tanggal, shift: session.shift, jenis_muatan: session.jenisMuatan,
-                unit_type: session.unitType, unit_id: session.unitId,
-                hm_awal_start: session.hmAwal, km_awal_start: session.kmAwal,
-                note: sanitizeHTML(el('#note').value), ritase: session.ritase, fuel_logs: session.fuel_logs || [],
-                status: 'pending_creation', hm_akhir: hmAkhir, km_akhir: kmAkhir, jam_kerja: hmAkhir - hmAwal
-            };
-            await localDb.saveReport(newReport);
-            localStorage.removeItem(SESSION_KEY);
-            stopGeofenceMonitoring();
-            await updateDashboardView();
-            resetForm();
-            showView('dashboard');
-            showMessage('Sukses', 'Laporan kerja berhasil disimpan.');
-            await syncToServer();
-        });
-        reportListContainer.addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.delete-btn');
-            const reportCard = e.target.closest('.report-card');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const reportId = deleteBtn.dataset.id;
-                showConfirm('Konfirmasi Hapus', 'Yakin ingin menghapus laporan ini?', async () => {
-                    const report = allReports.find(r => r.id === reportId);
-                    if (report) {
-                        if (report.status === 'pending_creation') {
-                            await localDb.deleteReport(reportId);
-                        } else {
-                            report.status = 'pending_deletion';
-                            await localDb.saveReport(report);
-                        }
-                        await updateDashboardView();
-                        showMessage('Laporan Dihapus', 'Laporan ditandai untuk dihapus.');
-                        await syncToServer();
-                    }
-                });
-            } else if (reportCard) {
-                const report = allReports.find(r => r.id === reportCard.dataset.reportId);
-                if (report) showReportDetail(report);
-            }
-        });
-        function renderFilteredReports(filteredReports) {
-            reportListContainer.innerHTML = '';
-            const hasReports = filteredReports.length > 0;
-            noDataForMonth.classList.toggle('hidden', !hasReports);
-            totalCard.classList.toggle('hidden', !hasReports);
-            exportSection.classList.toggle('hidden', !hasReports);
-            if (hasReports) {
-                filteredReports.forEach(report => {
-                    const card = document.createElement('div');
-                    card.className = 'glass-card p-5 fade-in cursor-pointer report-card relative';
-                    card.dataset.reportId = report.id;
-                    const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                    const muatanTagColor = report.jenis_muatan === 'COAL' ? 'bg-slate-800 text-white' : 'bg-amber-400 text-amber-900';
-                    const syncStatusIcon = report.status === 'pending_creation' ? `<i class="fas fa-cloud-upload-alt text-yellow-500 absolute top-4 left-4" title="Menunggu sinkronisasi"></i>` : '';
-                    card.innerHTML = `
-                        ${syncStatusIcon}
-                        <div class="flex justify-between items-start">
-                            <div><p class="font-bold text-lg">${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}</p><p class="text-sm text-slate-500">${formatDate(report.tanggal, true)}</p></div>
-                            <div class="text-right flex-shrink-0 ml-4"><span class="text-xs font-bold px-3 py-1 rounded-full ${muatanTagColor}">${sanitizeHTML(report.jenis_muatan)}</span><p class="text-xs text-slate-400 mt-1">${sanitizeHTML(report.shift)}</p></div>
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-black/5 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div><p class="text-xs text-slate-500">Jam Efektif</p><p class="font-black text-teal-500 text-2xl">${(report.jam_kerja || 0).toFixed(2)}</p></div>
-                            <div><p class="text-xs text-slate-500">Total Ritase</p><p class="font-black text-indigo-500 text-2xl">${ritaseCount}</p></div>
-                            <div><p class="text-xs text-slate-500">HM</p><p class="font-bold text-sm">${sanitizeHTML(report.hm_awal_start)} - ${sanitizeHTML(report.hm_akhir)}</p></div>
-                            <div><p class="text-xs text-slate-500">KM</p><p class="font-bold text-sm">${sanitizeHTML(report.km_awal_start)} - ${sanitizeHTML(report.km_akhir)}</p></div>
-                        </div>
-                        <button data-id="${report.id}" class="delete-btn absolute -top-1 -right-1 text-slate-400 hover:text-rose-500 h-8 w-8 rounded-full bg-white dark:bg-slate-800 shadow-md flex items-center justify-center"><i class="fas fa-trash-alt fa-sm"></i></button>`;
-                    reportListContainer.appendChild(card);
-                });
-            }
-            grandTotalJamEl.textContent = filteredReports.reduce((total, r) => total + (r.jam_kerja || 0), 0).toFixed(2);
-        }
-        function populateMainMonthFilter() {
-            const currentFilterValue = mainMonthFilter.value;
-            mainMonthFilter.innerHTML = '';
-            if (allReports.length === 0) return;
-            const availableMonths = [...new Set(allReports.map(r => r.tanggal.substring(0, 7)))];
-            availableMonths.forEach(monthStr => {
-                const option = document.createElement('option');
-                const date = new Date(monthStr + '-02T00:00:00Z');
-                option.value = monthStr;
-                option.textContent = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-                mainMonthFilter.appendChild(option);
-            });
-            mainMonthFilter.value = availableMonths.includes(currentFilterValue) ? currentFilterValue : availableMonths[0];
-        }
-        mainMonthFilter.addEventListener('change', () => renderFilteredReports(allReports.filter(r => r.tanggal.startsWith(mainMonthFilter.value))));
-        function resetForm() {
-            timesheetForm.reset();
-            const today = new Date();
-            today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-            tanggalInput.value = today.toISOString().slice(0, 10);
-            shiftInput.value = ""; jenisMuatanInput.value = "";
-            step2Div.classList.add('hidden');
-            step1Div.classList.remove('hidden');
-            if (clockInterval) clearInterval(clockInterval);
-            stopGeofenceMonitoring();
-        }
-        function getActiveSession() {
-            try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
-        }
-        startSessionBtn.addEventListener('click', () => {
-            if (!tanggalInput.value || !shiftInput.value || !jenisMuatanInput.value || !hmAwalStartInput.value || !kmAwalStartInput.value || !unitTypeStartInput.value || !unitIdStartInput.value) {
-                return showMessage('Data Kurang', 'Silakan isi semua kolom untuk memulai sesi.', true);
-            }
-            const sessionData = {
-                tanggal: tanggalInput.value, shift: shiftInput.value, jenisMuatan: jenisMuatanInput.value,
-                unitType: unitTypeStartInput.value.toUpperCase(), unitId: unitIdStartInput.value.toUpperCase(),
-                hmAwal: hmAwalStartInput.value, kmAwal: kmAwalStartInput.value,
-                ritase: createInitialRitaseData(shiftInput.value), fuel_logs: [],
-            };
-            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-            resumeSession(sessionData);
-        });
-        function createInitialRitaseData(shift) {
-            const data = {};
-            const startHour = (shift === 'Siang') ? 7 : 19;
-            for (let i = 0; i < 12; i++) {
-                let hour = (startHour + i) % 24;
-                data[hour.toString().padStart(2, '0') + ':00'] = [];
-            }
-            return data;
-        }
-        function sortRitaseHours(shift) {
-            return (a, b) => {
-                let hourA = parseInt(a), hourB = parseInt(b);
-                if (shift === 'Malam') {
-                    if (hourA < 7) hourA += 24;
-                    if (hourB < 7) hourB += 24;
-                }
-                return hourA - hourB;
-            };
-        }
-        function renderRitaseTable(container, ritaseData, shift) {
-            container.innerHTML = '';
-            Object.keys(ritaseData || {}).sort(sortRitaseHours(shift)).forEach(hourKey => {
-                const row = container.insertRow();
-                row.className = 'border-b border-black/5 dark:border-white/5 last:border-b-0';
-                row.innerHTML = `<td class="p-3 font-medium">${hourKey}</td><td class="p-3">${(ritaseData[hourKey] || []).map(m => String(m).padStart(2, '0')).sort((a, b) => a - b).join(', ') || '<span class="text-slate-500">-</span>'}</td>`;
-            });
-        }
-        function updateClock() { currentTimeEl.textContent = new Date().toLocaleTimeString('id-ID'); }
-        function recordRitase() {
-            const session = getActiveSession();
-            if (!session) return;
-            const now = new Date();
-            const hourKey = now.getHours().toString().padStart(2, '0') + ':00';
-            if (session.ritase.hasOwnProperty(hourKey)) {
-                session.ritase[hourKey].push(now.getMinutes());
-                renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
-                updateRitaseSummary(session.ritase, session.tanggal, session.shift);
-                localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-            } else {
-                 showMessage("Di Luar Jam Kerja", `Jam ${hourKey} tidak termasuk dalam shift.`, true);
-            }
-        }
-        function updateRitaseSummary(ritaseData, sessionDate, sessionShift) {
-            const allRitase = [];
-            Object.entries(ritaseData || {}).forEach(([hourKey, minutes]) => {
-                const hour = parseInt(hourKey);
-                minutes.forEach(minute => {
-                    let d = new Date(sessionDate + 'T00:00:00Z');
-                    if (sessionShift === 'Malam' && hour < 7) d.setUTCDate(d.getUTCDate() + 1);
-                    d.setUTCHours(hour, minute);
-                    allRitase.push(d);
-                });
-            });
-            allRitase.sort((a, b) => a - b);
-            totalRitaseSummary.textContent = allRitase.length;
-            if (allRitase.length > 1) {
-                let totalDiff = 0;
-                for (let i = 1; i < allRitase.length; i++) totalDiff += (allRitase[i] - allRitase[i - 1]);
-                const avgDiffSeconds = (totalDiff / (allRitase.length - 1)) / 1000;
-                cycleTimeSummary.textContent = `${Math.floor(avgDiffSeconds / 60)}m ${Math.round(avgDiffSeconds % 60)}s`;
-            } else {
-                cycleTimeSummary.textContent = '0m 0s';
-            }
-        }
-        saveFuelBtn.addEventListener('click', () => {
-            const session = getActiveSession();
-            if (!session) return;
-            const hm = parseFloat(hmFuelInput.value), liter = parseFloat(fuelLiterInput.value);
-            if (isNaN(hm) || isNaN(liter) || hm <= 0 || liter <= 0) return showMessage('Data Fuel Tidak Valid', 'HM dan Liter harus angka positif.', true);
-            if (!session.fuel_logs) session.fuel_logs = [];
-            session.fuel_logs.push({ hm, liter });
-            localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-            renderFuelLogHistory(session.fuel_logs);
-            hmFuelInput.value = ''; fuelLiterInput.value = '';
-            showMessage('Sukses', 'Catatan fuel berhasil disimpan.');
-        });
-        function renderFuelLogHistory(fuelLogs) {
-            fuelLogHistoryContainer.innerHTML = '';
-            if (!fuelLogs || fuelLogs.length === 0) return;
-            let historyHTML = '<h4 class="text-sm font-bold mt-4 mb-2">Riwayat Fuel:</h4><ul class="text-sm space-y-1">';
-            fuelLogs.forEach(log => historyHTML += `<li class="p-2 rounded-md bg-slate-100 dark:bg-slate-700/50">- HM ${log.hm}: ${log.liter} Liter</li>`);
-            fuelLogHistoryContainer.innerHTML = historyHTML + '</ul>';
-        }
-        cancelSessionBtn.addEventListener('click', () => {
-            showConfirm('Batalkan Sesi?', 'Semua data yang belum disimpan akan hilang. Yakin?', () => {
-                localStorage.removeItem(SESSION_KEY);
-                stopGeofenceMonitoring();
-                resetForm();
-                updateDashboardView();
-                showView('dashboard');
-            });
-        });
-        newSessionBtn.addEventListener('click', () => {
-            if (getActiveSession()) return showMessage('Sesi Masih Aktif', 'Selesaikan atau batalkan sesi yang berjalan.', true);
-            resetForm();
-            showView('form');
-        });
-        backToDashboardBtn.addEventListener('click', () => { showView('dashboard'); updateDashboardView(); });
-        recordRitaseBtn.addEventListener('click', recordRitase);
-        function showReportDetail(report) {
-            detailModalTitle.textContent = `Detail Laporan`;
-            detailModalInfo.innerHTML = `${formatDate(report.tanggal, true)} | Unit: ${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`;
-            let contentHTML = `<div class="overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg"><h4 class="font-bold mb-2">Tabel Ritase</h4><table class="w-full text-sm"><thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">Waktu</th><th class="p-2 font-semibold text-left">Ritase (Menit)</th></tr></thead><tbody id="detail-ritase-tbody"></tbody></table></div>`;
-            if (report.fuel_logs && report.fuel_logs.length > 0) {
-                contentHTML += `<div class="mt-4 overflow-x-auto bg-black/5 dark:bg-white/5 p-3 rounded-lg"><h4 class="font-bold mb-2">Riwayat Fuel</h4><table class="w-full text-sm"><thead class="bg-black/5 dark:bg-white/5"><tr><th class="p-2 font-semibold text-left">HM</th><th class="p-2 font-semibold text-left">Liter</th></tr></thead><tbody>${report.fuel_logs.map(log => `<tr><td class="p-2">${log.hm}</td><td class="p-2">${log.liter} L</td></tr>`).join('')}</tbody></table></div>`;
-            }
-            detailModalContent.innerHTML = contentHTML;
-            renderRitaseTable(el('#detail-ritase-tbody'), report.ritase, report.shift);
-            detailModal.dataset.reportId = report.id;
-            detailModal.classList.replace('hidden', 'flex');
-        }
-        function showConfirm(title, text, callback) {
-            confirmModalTitle.textContent = title;
-            confirmModalText.textContent = text;
-            confirmCallback = callback;
-            confirmModal.classList.replace('hidden', 'flex');
-        }
-        messageModalCloseBtn.addEventListener('click', () => messageModal.classList.replace('flex', 'hidden'));
-        closeDetailModalBtn.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
-        closeDetailModalBtn2.addEventListener('click', () => detailModal.classList.replace('flex', 'hidden'));
-        confirmModalCancelBtn.addEventListener('click', () => confirmModal.classList.replace('flex', 'hidden'));
-        confirmModalConfirmBtn.addEventListener('click', () => {
-            if (typeof confirmCallback === 'function') confirmCallback();
-            confirmModal.classList.replace('flex', 'hidden');
-        });
-        exportSinglePdfBtn.addEventListener('click', () => {
-             const report = allReports.find(r => r.id === detailModal.dataset.reportId);
-             if(report) exportSingleReportToPdf(report);
-        });
-        
-        function exportSingleReportToPdf(report) {
-             const { jsPDF } = window.jspdf; 
-             const doc = new jsPDF();
-             const pageW = doc.internal.pageSize.getWidth();
-             const margin = 14;
-             const primaryColor = '#0d9488';
-             const greyColor = '#475569';
-             let lastY = 0;
-             
-             doc.setFillColor(primaryColor);
-             doc.rect(0, 0, pageW, 30, 'F');
-             doc.setFont('helvetica', 'bold');
-             doc.setFontSize(18);
-             doc.setTextColor(255, 255, 255);
-             doc.text('LAPORAN KERJA HARIAN', pageW / 2, 18, { align: 'center' });
-             
-             doc.setFontSize(11);
-             doc.setTextColor(greyColor);
-             doc.text(`Operator: ${sanitizeHTML(report.nama_operator.toUpperCase())}`, margin, 45);
-             doc.text(`Tanggal: ${formatDate(report.tanggal, true)}`, pageW - margin, 45, { align: 'right' });
-             lastY = 50;
-             
-             doc.autoTable({
-                 startY: lastY,
-                 body: [
-                     [{content: 'Unit', styles: {fontStyle: 'bold'}}, `${sanitizeHTML(report.unit_type)} ${sanitizeHTML(report.unit_id)}`],
-                     [{content: 'Shift', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.shift)],
-                     [{content: 'Muatan', styles: {fontStyle: 'bold'}}, sanitizeHTML(report.jenis_muatan)],
-                     [{content: 'Jam Kerja', styles: {fontStyle: 'bold'}}, `${(report.jam_kerja || 0).toFixed(2)} Jam`],
-                 ],
-                 theme: 'plain', styles: { fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 35 } }
-             });
-             lastY = doc.lastAutoTable.finalY;
-
-             doc.autoTable({
-                startY: lastY,
-                body: [
-                    ['HM Awal', sanitizeHTML(report.hm_awal_start) || '-', 'KM Awal', sanitizeHTML(report.km_awal_start) || '-'],
-                    ['HM Akhir', sanitizeHTML(report.hm_akhir) || '-', 'KM Akhir', sanitizeHTML(report.km_akhir) || '-'],
-                ],
-                theme: 'grid', styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
-             });
-             lastY = doc.lastAutoTable.finalY + 10;
-
-             doc.setFont('helvetica', 'bold');
-             doc.setFontSize(12);
-             doc.setTextColor(greyColor);
-             doc.text('Log Ritase', margin, lastY);
-             lastY += 2;
-
-             const ritaseBody = Object.keys(report.ritase || {}).sort(sortRitaseHours(report.shift))
-                .map(hour => [hour, (report.ritase[hour] || []).map(m => String(m).padStart(2, '0')).sort((a,b) => a - b).join(', ')]);
-             
-             doc.autoTable({ 
-                 head: [['Waktu', 'Ritase Tercatat (Menit)']], body: ritaseBody, startY: lastY, theme: 'striped', 
-                 headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 2, fontSize: 9, valign: 'top' }, 
-                 columnStyles: { 0: { cellWidth: 40 } } 
-            });
-             lastY = doc.lastAutoTable.finalY + 10;
-
-             if (report.fuel_logs && report.fuel_logs.length > 0) {
-                 doc.setFont('helvetica', 'bold');
-                 doc.setFontSize(12);
-                 doc.setTextColor(greyColor);
-                 doc.text('Log Pengisian Fuel', margin, lastY);
-                 lastY += 2;
-                 doc.autoTable({ 
-                     head: [['HM Pengisian', 'Jumlah (Liter)']], body: report.fuel_logs.map(log => [log.hm, log.liter]), startY: lastY, theme: 'striped', 
-                     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 2, fontSize: 9 } 
-                });
-                 lastY = doc.lastAutoTable.finalY + 10;
-             }
-             
-             if(report.note) {
-                 doc.setFont('helvetica', 'bold');
-                 doc.setFontSize(12);
-                 doc.setTextColor(greyColor);
-                 doc.text('Catatan:', margin, lastY);
-                 lastY += 5;
-                 doc.setFont('helvetica', 'normal');
-                 doc.setFontSize(10);
-                 doc.text(doc.splitTextToSize(report.note, pageW - (margin * 2)), margin, lastY);
-             }
-
-             const pageCount = doc.internal.getNumberOfPages();
-             for(let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(150);
-                doc.text(`Laporan dibuat oleh sistem pada ${new Date().toLocaleString('id-ID')}`, margin, doc.internal.pageSize.getHeight() - 10);
-                doc.text(`Halaman ${i} dari ${pageCount}`, pageW - margin, doc.internal.pageSize.getHeight() - 10, {align: 'right'});
-             }
-             doc.save(`LaporanHarian_${report.tanggal}_${report.unit_id.replace(/[^a-z0-9]/gi, '_')}.pdf`);
-             showMessage('Berhasil!', `Laporan PDF berhasil dibuat!`);
-        }
-
-        function exportMonthlySummaryToPdf() {
-            const selectedMonth = mainMonthFilter.value;
-            const filteredReports = allReports.filter(r => r.tanggal.startsWith(selectedMonth)).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
-            if (filteredReports.length === 0) return showMessage('Tidak Ada Data', 'Tidak ada data laporan untuk diexport.', true);
-
-            let totalJamKerja = 0, totalRitaseOB = 0, totalRitaseCOAL = 0;
-            filteredReports.forEach(report => {
-                totalJamKerja += (report.jam_kerja || 0);
-                const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                if (report.jenis_muatan === 'OB') totalRitaseOB += ritaseCount;
-                else if (report.jenis_muatan === 'COAL') totalRitaseCOAL += ritaseCount;
-            });
-
-            const gajiLembur = totalJamKerja * TARIF_PER_JAM;
-            const bonusRitaseOB = totalRitaseOB * TARIF_RITASE_OB;
-            const bonusRitaseCOAL = totalRitaseCOAL * TARIF_RITASE_COAL;
-            const potonganKesehatan = GAJI_POKOK * PERSEN_POTONGAN_KESEHATAN;
-            const potonganKerja = GAJI_POKOK * PERSEN_POTONGAN_KERJA;
-            const totalPendapatanKotor = GAJI_POKOK + gajiLembur + bonusRitaseOB + bonusRitaseCOAL;
-            const totalPotongan = potonganKesehatan + potonganKerja;
-            const pendapatanBersih = totalPendapatanKotor - totalPotongan;
-            
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const pageW = doc.internal.pageSize.getWidth();
-            const primaryColor = '#0d9488';
-            const periodDate = new Date(selectedMonth + '-02T00:00:00Z');
-            const periodText = periodDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-            
-            doc.setFillColor(primaryColor);
-            doc.rect(0, 0, pageW, 30, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.setTextColor(255, 255, 255);
-            doc.text('SLIP GAJI OPERATOR', pageW / 2, 15, { align: 'center' });
-            doc.setFontSize(12);
-            doc.text(`Periode: ${periodText}`, pageW / 2, 23, { align: 'center' });
-            
-            doc.setFontSize(10);
-            doc.setTextColor(0,0,0);
-            doc.text(`Nama: ${sanitizeHTML(currentUser.full_name)}`, 14, 40);
-            doc.text(`NIK: ${sanitizeHTML(currentUser.nik)}`, 14, 45);
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text('A. PENDAPATAN', 14, 60);
-            doc.autoTable({
-                body: [
-                    ['Gaji Pokok', '', formatCurrency(GAJI_POKOK)],
-                    ['Insentif HM (Lembur)', `${totalJamKerja.toFixed(2)} jam x ${formatCurrency(TARIF_PER_JAM)}`, formatCurrency(gajiLembur)],
-                    ['Insentif OB', `${totalRitaseOB} rit x ${formatCurrency(TARIF_RITASE_OB)}`, formatCurrency(bonusRitaseOB)],
-                    ['Insentif CG', `${totalRitaseCOAL} rit x ${formatCurrency(TARIF_RITASE_COAL)}`, formatCurrency(bonusRitaseCOAL)],
-                ], startY: 65, theme: 'plain', styles: { fontSize: 10 },
-                columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
-            });
-            let lastY = doc.lastAutoTable.finalY;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Total Pendapatan Kotor', 14, lastY + 5);
-            doc.text(formatCurrency(totalPendapatanKotor), pageW - 14, lastY + 5, { align: 'right' });
-
-            lastY += 15;
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text('B. POTONGAN', 14, lastY);
-            doc.autoTable({
-                body: [
-                    ['BPJS Kesehatan (1%)', '', formatCurrency(potonganKesehatan)],
-                    ['BPJS Ketenagakerjaan (3%)', '', formatCurrency(potonganKerja)],
-                ], startY: lastY + 5, theme: 'plain', styles: { fontSize: 10 },
-                columnStyles: { 0: {cellWidth: 60}, 1: {cellWidth: 60}, 2: { halign: 'right' } }
-            });
-            lastY = doc.lastAutoTable.finalY;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Total Potongan', 14, lastY + 5);
-            doc.text(formatCurrency(totalPotongan), pageW - 14, lastY + 5, { align: 'right' });
-
-            lastY += 15;
-            doc.setFillColor(230, 240, 255);
-            doc.rect(14, lastY - 5, pageW - 28, 12, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(14);
-            doc.setTextColor(0,0,0);
-            doc.text('PENDAPATAN BERSIH (Take Home Pay)', 16, lastY + 2);
-            doc.text(formatCurrency(pendapatanBersih), pageW - 16, lastY + 2, { align: 'right' });
-            
-            lastY += 10;
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Dokumen ini dibuat secara otomatis oleh sistem pada ${new Date().toLocaleString('id-ID')}`, 14, lastY + 10);
-            
-            doc.addPage();
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text('Lampiran: Log Kerja Harian', 14, 20);
-            const detailBody = filteredReports.map(report => {
-                const ritaseCount = Object.values(report.ritase || {}).reduce((sum, arr) => sum + arr.length, 0);
-                return [ formatDate(report.tanggal), `${report.unit_type} ${report.unit_id}`, report.jenis_muatan, (report.jam_kerja || 0).toFixed(2), ritaseCount ];
-            });
-            doc.autoTable({ head: [['Tanggal', 'Unit', 'Tipe', 'Jam Kerja', 'Jml Ritase']], body: detailBody, startY: 25, theme: 'striped', headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 9 }, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } } });
-
-            const safeUserName = (currentUser.full_name || 'operator').replace(/[^a-z0-9]/gi, '_');
-            doc.save(`SlipGaji_${safeUserName}_${selectedMonth}.pdf`);
-            showMessage('Berhasil!', 'Slip Gaji PDF berhasil dibuat!');
-        }
-        
-        exportPdfBtn.addEventListener('click', exportMonthlySummaryToPdf);
-        setupGeofenceBtn.addEventListener('click', setupGeofenceArea);
-        toggleGpsBtn.addEventListener('click', () => isMonitoringGeofence ? stopGeofenceMonitoring() : startGeofenceMonitoring());
-        cancelSetupBtn.addEventListener('click', () => geofenceSetupModal.classList.replace('flex', 'hidden'));
-        saveGeofenceBtn.addEventListener('click', saveGeofenceArea);
     });
     </script>
 </body>
