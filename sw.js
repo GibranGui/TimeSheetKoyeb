@@ -9,8 +9,7 @@ const urlsToCache = [
   './js/supabase.min.js',
   './js/jspdf.umd.min.js',
   './js/jspdf.plugin.autotable.min.js',
-  './icon-192x192.png',
-  './icon-512x512.png',
+  './icon.png',
   './manifest.json'
 ];
 
