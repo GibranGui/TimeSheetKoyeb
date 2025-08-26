@@ -234,6 +234,52 @@
         .config-help li {
             margin-bottom: 0.5rem;
         }
+
+        /* Auto-close notification */
+        .auto-close-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background: #10b981;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .auto-close-notification.hide {
+            animation: slideOutRight 0.3s ease-in forwards;
+        }
+        
+        .wake-lock-warning {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.875rem;
+        }
+        
+        .wake-lock-warning i {
+            color: #f59e0b;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -250,6 +296,12 @@
     
     <div id="online-indicator" class="online-indicator">
         <i class="fas fa-wifi mr-2"></i>Koneksi pulih - Menyinkron data...
+    </div>
+
+    <!-- Auto-close Notification -->
+    <div id="auto-close-notification" class="auto-close-notification hidden">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text"></span>
     </div>
 
     <!-- Tombol Instal PWA -->
@@ -378,8 +430,8 @@
                                             <p id="total-ritase-summary" class="font-black text-indigo-500 text-3xl">0</p>
                                         </div>
                                         <div class="glass-card p-4 text-center">
-                                            <p class="text-sm text-slate-500">Avg. Cycle Time</p>
-                                            <p id="cycle-time-summary" class="font-black text-teal-500 text-3xl">0m 0s</p>
+                                            <p class="text-sm text-slate-500">Cycle Time Tercepat</p>
+                                            <p id="cycle-time-summary" class="font-black text-teal-500 text-3xl">-</p>
                                         </div>
                                     </div>
                                     
@@ -418,6 +470,10 @@
                                         </div>
                                         <div id="geofence-coords" class="text-xs mt-2 text-slate-500 hidden">
                                             Area: <span id="geofence-lat"></span>, <span id="geofence-lng"></span> (Radius: 50m)
+                                        </div>
+                                        <div id="wake-lock-warning" class="wake-lock-warning mt-3 hidden">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Fitur Layar Menyala akan aktif untuk mencegah layar mati selama GPS Auto-Ritase berjalan</span>
                                         </div>
                                     </div>
                                     
@@ -684,6 +740,8 @@
         const loadingText = document.getElementById('loading-text');
         const offlineIndicator = document.getElementById('offline-indicator');
         const onlineIndicator = document.getElementById('online-indicator');
+        const autoCloseNotification = document.getElementById('auto-close-notification');
+        const notificationText = document.getElementById('notification-text');
         
         // --- Status Koneksi ---
         function updateConnectionStatus() {
@@ -885,6 +943,7 @@
         const gpsRitaseCard = el('#gps-ritase-card');
         const gpsStatusIndicator = el('#gps-status-indicator');
         const gpsDebugInfo = el('#gps-debug-info');
+        const wakeLockWarning = el('#wake-lock-warning');
 
         // --- STATE APLIKASI ---
         let allReports = [];
@@ -910,6 +969,10 @@
         let lastTriggerTime = 0;
         const TRIGGER_COOLDOWN = 30000; // 30 detik cooldown antara trigger
         const GEOFENCE_RADIUS = 50; // 50 meter radius
+        
+        // --- Wake Lock Variables ---
+        let wakeLock = null;
+        let isWakeLockEnabled = false;
 
         // --- Background Geofencing Functions (Optimized for Offline) ---
 
@@ -984,6 +1047,9 @@
                 recordRitase();
                 updateRitaseSummary(getActiveSession().ritase, getActiveSession().tanggal, getActiveSession().shift);
                 
+                // Tampilkan notifikasi auto-close
+                showAutoCloseNotification('Ritase tercatat otomatis saat meninggalkan area muatan.');
+                
                 // Tampilkan notifikasi
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Auto-Ritase', {
@@ -1021,6 +1087,62 @@
             } catch (error) {
                 console.error('Gagal menyimpan ritase latar belakang:', error);
             }
+        }
+
+        // --- Wake Lock Functions ---
+        async function enableWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                console.warn('Wake Lock API tidak didukung di browser ini');
+                return false;
+            }
+            
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                isWakeLockEnabled = true;
+                console.log('Wake Lock diaktifkan');
+                
+                wakeLock.addEventListener('release', () => {
+                    console.log('Wake Lock dilepaskan');
+                    isWakeLockEnabled = false;
+                });
+                
+                return true;
+            } catch (err) {
+                console.error(`Error mengaktifkan Wake Lock: ${err.message}`);
+                isWakeLockEnabled = false;
+                return false;
+            }
+        }
+        
+        async function disableWakeLock() {
+            if (wakeLock !== null) {
+                await wakeLock.release();
+                wakeLock = null;
+            }
+            isWakeLockEnabled = false;
+            console.log('Wake Lock dinonaktifkan');
+        }
+        
+        // Handle visibilitas halaman
+        document.addEventListener('visibilitychange', async () => {
+            if (isWakeLockEnabled && document.visibilityState === 'visible') {
+                await enableWakeLock();
+            }
+        });
+
+        // --- Auto-Close Notification Function ---
+        function showAutoCloseNotification(message) {
+            notificationText.textContent = message;
+            autoCloseNotification.classList.remove('hidden');
+            
+            // Auto close setelah 3 detik
+            setTimeout(() => {
+                autoCloseNotification.classList.add('hide');
+                setTimeout(() => {
+                    autoCloseNotification.classList.add('hidden');
+                    autoCloseNotification.classList.remove('hide');
+                }, 300);
+            }, 3000);
         }
 
         // --- LOGIKA TEMA ---
@@ -1105,10 +1227,12 @@
             return distance <= geofence.radius;
         }
         
-        // Handle geofence enter/exit events
+        // Handle geofence enter/exit events - DIPERBAIKI
         function handleGeofenceChange(isInside, distance) {
+            // Jika state tidak berubah, tidak perlu melakukan apa-apa
             if (lastGeofenceState === isInside) return;
         
+            const currentTime = Date.now();
             const previouslyInside = lastGeofenceState === true;
             lastGeofenceState = isInside;
         
@@ -1117,37 +1241,31 @@
                 geofenceStatusText.textContent = 'Di Area Muatan';
                 gpsRitaseCard.classList.add('gps-active');
                 gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Dalam Area`;
+                
+                // Jangan trigger ritase saat pertama kali masuk area
+                console.log("Masuk area muatan");
             } else {
                 geofenceStatusIcon.classList.replace('geofence-active', 'geofence-inactive');
                 geofenceStatusText.textContent = 'Di Luar Area';
                 gpsRitaseCard.classList.remove('gps-active');
                 gpsDebugInfo.textContent = `Jarak: ${distance.toFixed(1)}m | Status: Di Luar Area`;
         
-                const currentTime = Date.now();
+                // Hanya trigger ritase jika sebelumnya di dalam area dan cooldown sudah selesai
                 if (previouslyInside && (currentTime - lastTriggerTime) > TRIGGER_COOLDOWN) {
                     geofenceTriggerCount++;
                     geofenceTriggerCountEl.textContent = geofenceTriggerCount;
                     recordRitase();
                     lastTriggerTime = currentTime;
-                    showMessage('Auto-Ritase', 'Ritase tercatat otomatis saat meninggalkan area muatan.');
+                    showAutoCloseNotification('Ritase tercatat otomatis saat meninggalkan area muatan.');
                 }
             }
         }
         
-        // Start monitoring geofence
-        function startGeofenceMonitoring() {
+        // Start monitoring geofence - DIPERBAIKI
+        async function startGeofenceMonitoring() {
             if (!currentGeofence) {
-                // Coba muat dari fallback storage
-                const fallbackGeofence = localStorage.getItem('foregroundGeofence');
-                if (fallbackGeofence) {
-                    currentGeofence = JSON.parse(fallbackGeofence);
-                    geofenceCoords.classList.remove('hidden');
-                    geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
-                    geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-                } else {
-                    showMessage('GPS Error', 'Area muatan belum disetup. Silakan setup area terlebih dahulu.', true);
-                    return false;
-                }
+                showMessage('GPS Error', 'Area muatan belum disetup. Silakan setup area terlebih dahulu.', true);
+                return false;
             }
             
             if (geofenceWatchId !== null) {
@@ -1159,9 +1277,18 @@
                 return false;
             }
             
+            // Reset state setiap kali memulai monitoring
+            lastGeofenceState = null;
+            
             gpsStatusIndicator.classList.remove('gps-status-off', 'gps-status-on');
             gpsStatusIndicator.classList.add('gps-status-acquiring');
             gpsDebugInfo.textContent = 'Mencari sinyal GPS...';
+            
+            // Aktifkan wake lock jika didukung
+            if ('wakeLock' in navigator) {
+                wakeLockWarning.classList.remove('hidden');
+                await enableWakeLock();
+            }
             
             geofenceWatchId = navigator.geolocation.watchPosition(
                 (position) => {
@@ -1217,16 +1344,23 @@
             return true;
         }
         
-        // Stop monitoring geofence
-        function stopGeofenceMonitoring() {
+        // Stop monitoring geofence - DIPERBAIKI
+        async function stopGeofenceMonitoring() {
             if (geofenceWatchId !== null) {
                 navigator.geolocation.clearWatch(geofenceWatchId);
                 geofenceWatchId = null;
             }
             
-            unregisterBackgroundGeofence();
-            
+            // Reset state monitoring
             isMonitoringGeofence = false;
+            lastGeofenceState = null;
+            
+            // Nonaktifkan wake lock
+            if (isWakeLockEnabled) {
+                await disableWakeLock();
+                wakeLockWarning.classList.add('hidden');
+            }
+            
             toggleGpsBtn.innerHTML = '<i class="fas fa-play mr-1"></i>Mulai';
             toggleGpsBtn.classList.replace('btn-danger', 'btn-gray');
             
@@ -1241,7 +1375,7 @@
             gpsStatusIndicator.classList.add('gps-status-off');
         }
         
-        // Setup new geofence area
+        // Setup new geofence area - DIPERBAIKI
         function setupGeofenceArea() {
             if (!navigator.geolocation) {
                 showMessage('GPS Tidak Support', 'Browser Anda tidak mendukung geolocation.', true);
@@ -1276,7 +1410,7 @@
             );
         }
         
-        // Save geofence area
+        // Save geofence area - DIPERBAIKI
         async function saveGeofenceArea() {
             if (!currentGeofence) {
                 showMessage('Error', 'Tidak ada data lokasi yang valid.', true);
@@ -1289,20 +1423,19 @@
             geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
             geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
             
-            const backgroundRegistered = await registerBackgroundGeofence(currentGeofence);
+            // Reset state dan trigger count
+            lastGeofenceState = null;
+            geofenceTriggerCount = 0;
+            geofenceTriggerCountEl.textContent = '0';
             
-            if (backgroundRegistered) {
-                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang diaktifkan.');
-            } else {
-                showMessage('Berhasil', 'Area muatan berhasil disimpan! Pemantauan latar belakang tidak didukung.');
-            }
+            showMessage('Berhasil', 'Area muatan berhasil disimpan!');
             
             geofenceSetupModal.classList.replace('flex', 'hidden');
             
-            const session = getActiveSession();
-            if (session) {
-                startGeofenceMonitoring();
-            }
+            // Jangan langsung mulai monitoring setelah setup
+            // Biarkan pengguna yang memutuskan kapan memulai
+            toggleGpsBtn.innerHTML = '<i class="fas fa-play mr-1"></i>Mulai';
+            toggleGpsBtn.classList.replace('btn-danger', 'btn-gray');
         }
         
         // Load saved geofence from localStorage
@@ -1313,8 +1446,6 @@
                 geofenceCoords.classList.remove('hidden');
                 geofenceLat.textContent = currentGeofence.latitude.toFixed(6);
                 geofenceLng.textContent = currentGeofence.longitude.toFixed(6);
-                
-                registerBackgroundGeofence(currentGeofence);
             }
         }
 
@@ -1924,6 +2055,7 @@
                 renderRitaseTable(ritaseTableBody, session.ritase, session.shift);
                 updateRitaseSummary(session.ritase, session.tanggal, session.shift);
                 localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+                showAutoCloseNotification('Ritase berhasil dicatat');
             } else {
                  showMessage("Di Luar Jam Kerja", `Jam ${hourKey} tidak termasuk dalam shift yang dipilih.`, true);
             }
@@ -1949,17 +2081,22 @@
 
             totalRitaseSummary.textContent = allRitase.length;
 
+            // Hitung cycle time tercepat (bukan rata-rata)
             if (allRitase.length > 1) {
-                let totalDiff = 0;
+                let fastestCycle = Infinity;
+                
                 for (let i = 1; i < allRitase.length; i++) {
-                    totalDiff += (allRitase[i] - allRitase[i-1]);
+                    const cycleTime = (allRitase[i] - allRitase[i-1]) / 1000; // dalam detik
+                    if (cycleTime < fastestCycle) {
+                        fastestCycle = cycleTime;
+                    }
                 }
-                const avgDiffSeconds = (totalDiff / (allRitase.length - 1)) / 1000;
-                const avgMinutes = Math.floor(avgDiffSeconds / 60);
-                const avgSeconds = Math.round(avgDiffSeconds % 60);
-                cycleTimeSummary.textContent = `${avgMinutes}m ${avgSeconds}s`;
+                
+                const minutes = Math.floor(fastestCycle / 60);
+                const seconds = Math.round(fastestCycle % 60);
+                cycleTimeSummary.textContent = `${minutes}m ${seconds}s`;
             } else {
-                cycleTimeSummary.textContent = '0m 0s';
+                cycleTimeSummary.textContent = '-';
             }
         }
 
@@ -2312,7 +2449,7 @@
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(14);
             doc.setTextColor(0,0,0);
-            doc.text('PENDAPATAN BERSIH (Take Home Pay)', 16, lastY + 2);
+            doc.text('PENDAPATAN BERSih (Take Home Pay)', 16, lastY + 2);
             doc.text(formatCurrency(pendapatanBersih), pageW - 16, lastY + 2, { align: 'right' });
             
             lastY += 10;
